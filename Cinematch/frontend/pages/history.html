@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineMatch — History</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink:#09090e;--deep:#0e0e18;--panel:#12121e;--card:#15151f;
+      --border:rgba(255,255,255,0.07);--gold:#c9a84c;--gold-dim:#7a6330;
+      --amber:#e8b84b;--text:#d4cfc8;--muted:#5a5760;--dim:#3a3840;
+      --success:#5cad7f;--error:#e05c5c;
+      --ff-title:'Bebas Neue',sans-serif;
+      --ff-body:'Cormorant Garamond',serif;
+      --ff-mono:'DM Mono',monospace;
+    }
+    body { background:var(--ink);color:var(--text);font-family:var(--ff-body);font-size:17px;min-height:100vh; }
+
+    .topbar {
+      position:sticky;top:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 40px;height:64px;
+      background:rgba(9,9,14,0.92);backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+    }
+    .topbar-logo { font-family:var(--ff-title);font-size:28px;letter-spacing:6px;color:var(--gold); }
+    .topbar-nav { display:flex;align-items:center;gap:8px; }
+    .nav-link {
+      font-family:var(--ff-mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;
+      color:var(--muted);background:none;border:none;cursor:pointer;padding:8px 16px;
+      transition:color 0.2s;text-decoration:none;
+    }
+    .nav-link:hover,.nav-link.active { color:var(--gold); }
+    .nav-sep { width:1px;height:16px;background:var(--border); }
+
+    .btn-logout {
+      background:none;border:none;color:var(--muted);font-family:var(--ff-mono);
+      font-size:10px;cursor:pointer;padding:4px 8px;letter-spacing:2px;text-transform:uppercase;
+      transition:color 0.2s;
+    }
+    .btn-logout:hover { color:var(--error); }
+
+    .page-content { max-width:1100px;margin:0 auto;padding:48px 40px 80px; }
+
+    .page-header { margin-bottom:48px; }
+    .page-title {
+      font-family:var(--ff-title);font-size:56px;letter-spacing:6px;
+      color:var(--text);line-height:1;margin-bottom:8px;
+    }
+    .page-sub {
+      font-family:var(--ff-mono);font-size:11px;letter-spacing:3px;color:var(--muted);
+    }
+
+    .gold-line {
+      height:1px;background:linear-gradient(90deg,var(--gold-dim),transparent);
+      margin:24px 0 40px;
+    }
+
+    /* Stats row */
+    .stats-row {
+      display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:48px;
+    }
+    .stat-box {
+      background:var(--card);border:1px solid var(--border);
+      padding:20px;border-radius:2px;
+    }
+    .stat-val {
+      font-family:var(--ff-title);font-size:40px;letter-spacing:2px;
+      color:var(--gold);line-height:1;margin-bottom:4px;
+    }
+    .stat-label {
+      font-family:var(--ff-mono);font-size:9px;letter-spacing:3px;
+      text-transform:uppercase;color:var(--muted);
+    }
+
+    /* History table */
+    .history-table {
+      width:100%;border-collapse:collapse;
+    }
+    .history-table th {
+      font-family:var(--ff-mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;
+      color:var(--muted);text-align:left;padding:10px 16px 10px 0;
+      border-bottom:1px solid var(--border);
+    }
+    .history-table td {
+      padding:16px 16px 16px 0;border-bottom:1px solid rgba(255,255,255,0.04);
+      vertical-align:middle;
+    }
+    .history-table tr:hover td { background:rgba(255,255,255,0.015); }
+
+    .movie-thumb {
+      width:36px;height:52px;
+      background:var(--deep);border:1px solid var(--border);
+      border-radius:1px;display:flex;align-items:center;justify-content:center;
+      font-size:18px;flex-shrink:0;
+    }
+    .td-movie {
+      display:flex;align-items:center;gap:14px;
+    }
+    .td-title {
+      font-weight:600;font-size:16px;color:var(--text);
+    }
+    .td-genre {
+      font-family:var(--ff-mono);font-size:9px;letter-spacing:1px;
+      color:var(--muted);margin-top:3px;text-transform:uppercase;
+    }
+    .td-date {
+      font-family:var(--ff-mono);font-size:11px;color:var(--muted);letter-spacing:1px;
+    }
+    .star-display { color:var(--gold);letter-spacing:1px;font-size:13px; }
+    .star-empty   { color:var(--dim);font-size:13px; }
+
+    .badge {
+      display:inline-flex;align-items:center;gap:5px;
+      padding:4px 10px;border-radius:1px;
+      font-family:var(--ff-mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    }
+    .badge.positive { color:var(--success);background:rgba(92,173,127,0.08);border:1px solid rgba(92,173,127,0.2); }
+    .badge.negative { color:var(--error);  background:rgba(224,92,92,0.08);  border:1px solid rgba(224,92,92,0.2); }
+    .badge.neutral  { color:#d4875a;       background:rgba(212,135,90,0.08); border:1px solid rgba(212,135,90,0.2); }
+    .badge.none     { color:var(--dim);    background:transparent;            border:1px solid var(--border); }
+
+    /* Empty state */
+    .empty-history {
+      text-align:center;padding:80px 20px;
+      border:1px dashed var(--dim);border-radius:2px;
+    }
+    .empty-icon { font-size:56px;display:block;margin-bottom:16px;opacity:0.3; }
+    .empty-text {
+      font-family:var(--ff-mono);font-size:12px;letter-spacing:2px;
+      color:var(--muted);margin-bottom:24px;
+    }
+    .btn-go {
+      display:inline-block;padding:12px 28px;
+      background:transparent;border:1px solid var(--gold-dim);
+      color:var(--gold);font-family:var(--ff-title);font-size:18px;
+      letter-spacing:6px;cursor:pointer;text-decoration:none;
+      transition:all 0.2s;
+    }
+    .btn-go:hover { background:rgba(201,168,76,0.08); }
+
+    /* Sentiment chart */
+    .sentiment-chart { margin-bottom:48px; }
+    .chart-title {
+      font-family:var(--ff-title);font-size:28px;letter-spacing:4px;
+      color:var(--text);margin-bottom:20px;
+    }
+    .donut-wrap {
+      display:flex;align-items:center;gap:40px;
+    }
+    .donut-svg { flex-shrink:0; }
+    .donut-legend { display:flex;flex-direction:column;gap:12px; }
+    .legend-item { display:flex;align-items:center;gap:10px; }
+    .legend-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+    .legend-label { font-family:var(--ff-mono);font-size:11px;letter-spacing:1px;color:var(--text); }
+    .legend-val   { font-family:var(--ff-mono);font-size:11px;letter-spacing:1px;color:var(--muted);margin-left:auto; }
+
+    @media(max-width:700px){
+      .stats-row{grid-template-columns:repeat(2,1fr);}
+      .topbar{padding:0 20px;}
+      .page-content{padding:32px 20px 60px;}
+      .history-table th:nth-child(3),.history-table td:nth-child(3),
+      .history-table th:nth-child(4),.history-table td:nth-child(4){display:none;}
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-logo">CINEMATCH</div>
+  <nav class="topbar-nav">
+    <a class="nav-link" href="dashboard.html">Discover</a>
+    <div class="nav-sep"></div>
+    <a class="nav-link active" href="history.html">History</a>
+    <div class="nav-sep"></div>
+    <button class="btn-logout" onclick="logout()">Exit</button>
+  </nav>
+</header>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="page-title">My Film History</div>
+    <div class="page-sub">Your complete viewing record and sentiment analysis</div>
+  </div>
+  <div class="gold-line"></div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-box"><div class="stat-val" id="stat-total">—</div><div class="stat-label">Films Watched</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-rated">—</div><div class="stat-label">Films Rated</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-avg">—</div><div class="stat-label">Avg Rating</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-reviews">—</div><div class="stat-label">Reviews Written</div></div>
+  </div>
+
+  <!-- Sentiment breakdown chart -->
+  <div class="sentiment-chart" id="sentiment-chart" style="display:none">
+    <div class="chart-title">Review Sentiment Breakdown</div>
+    <div class="donut-wrap">
+      <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120" id="donut-svg">
+        <circle cx="60" cy="60" r="48" fill="none" stroke="#1a1a2e" stroke-width="20"/>
+      </svg>
+      <div class="donut-legend" id="donut-legend"></div>
+    </div>
+  </div>
+
+  <!-- History table -->
+  <div id="history-container">
+    <table class="history-table" id="history-table" style="display:none">
+      <thead>
+        <tr>
+          <th>Film</th>
+          <th>Rating</th>
+          <th>Sentiment</th>
+          <th>Watched</th>
+        </tr>
+      </thead>
+      <tbody id="history-tbody"></tbody>
+    </table>
+    <div class="empty-history" id="empty-state">
+      <span class="empty-icon">🎞</span>
+      <div class="empty-text">Your viewing history will appear here</div>
+      <a class="btn-go" href="dashboard.html">Discover Films</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:5000/api';
+const GENRE_EMOJI = {
+  Action:'⚔️',Adventure:'🗺️',Animation:'✨',Comedy:'😂',Crime:'🔎',
+  Drama:'🎭',Fantasy:'🧙',Horror:'👻',Mystery:'🔍',Romance:'💕',
+  'Sci-Fi':'🚀',Thriller:'🔪',Children:'🧸'
+};
+
+const token = localStorage.getItem('cm_token');
+if (!token) window.location.href = '../index.html';
+
+(async function init() {
+  await loadHistory();
+  await loadStats();
+})();
+
+async function apiFetch(endpoint) {
+  try {
+    const res = await fetch(`${API}${endpoint}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch {
+    // Demo data
+    return {
+      history: [
+        { movie_id:1,  title:'Toy Story (1995)',    genre:'Adventure|Animation|Children', watched_at:'2025-04-20T14:30:00', rating:4, sentiment:'positive' },
+        { movie_id:6,  title:'Heat (1995)',          genre:'Action|Crime|Thriller',        watched_at:'2025-04-19T20:15:00', rating:5, sentiment:'positive' },
+        { movie_id:16, title:'Casino (1995)',        genre:'Crime|Drama',                   watched_at:'2025-04-18T22:00:00', rating:3, sentiment:'neutral'  },
+        { movie_id:17, title:'Sense & Sensibility',  genre:'Drama|Romance',                watched_at:'2025-04-15T19:45:00', rating:4, sentiment:'positive' },
+        { movie_id:22, title:'Copycat (1995)',       genre:'Crime|Drama|Thriller',          watched_at:'2025-04-12T21:10:00', rating:2, sentiment:'negative' },
+      ],
+      total: 5
+    };
+  }
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function starsHTML(n) {
+  n = parseInt(n) || 0;
+  return '★'.repeat(n) + `<span class="star-empty">${'★'.repeat(5-n)}</span>`;
+}
+
+async function loadHistory() {
+  const data = await apiFetch('/get_history?limit=50');
+  const tbody = document.getElementById('history-tbody');
+  const history = data.history || [];
+
+  if (!history.length) {
+    document.getElementById('empty-state').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('history-table').style.display = 'table';
+
+  // Sentiment counts for chart
+  const sentCounts = { positive: 0, neutral: 0, negative: 0, none: 0 };
+
+  history.forEach((item, idx) => {
+    const genres = (item.genre || '').split('|');
+    const emoji = GENRE_EMOJI[genres[0]] || '🎬';
+    const sentiment = item.sentiment || 'none';
+    sentCounts[sentiment] = (sentCounts[sentiment] || 0) + 1;
+
+    const tr = document.createElement('tr');
+    tr.style.animationDelay = `${idx * 0.04}s`;
+    tr.innerHTML = `
+      <td>
+        <div class="td-movie">
+          <div class="movie-thumb">${emoji}</div>
+          <div>
+            <div class="td-title">${item.title || 'Movie #' + item.movie_id}</div>
+            <div class="td-genre">${genres.slice(0,2).join(' · ')}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        ${item.rating
+          ? `<div class="star-display">${starsHTML(item.rating)}</div>`
+          : `<span style="color:var(--dim);font-family:var(--ff-mono);font-size:11px;">Not rated</span>`
+        }
+      </td>
+      <td>
+        <span class="badge ${sentiment}">
+          ${{ positive:'😊 Positive', negative:'😞 Negative', neutral:'😐 Neutral', none:'— Not reviewed' }[sentiment]}
+        </span>
+      </td>
+      <td class="td-date">${formatDate(item.watched_at)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Build donut chart
+  renderDonut(sentCounts);
+
+  // Update stats
+  document.getElementById('stat-total').textContent = history.length;
+  const rated = history.filter(h => h.rating).length;
+  document.getElementById('stat-rated').textContent = rated;
+  const avg = history.filter(h => h.rating).reduce((a,h) => a + parseFloat(h.rating||0), 0) / (rated || 1);
+  document.getElementById('stat-avg').textContent = rated ? avg.toFixed(1) + '★' : '—';
+  const reviewed = history.filter(h => h.sentiment && h.sentiment !== 'none').length;
+  document.getElementById('stat-reviews').textContent = reviewed;
+}
+
+function renderDonut(counts) {
+  const colors = { positive:'#5cad7f', neutral:'#d4875a', negative:'#e05c5c', none:'#3a3840' };
+  const labels = { positive:'Positive', neutral:'Neutral', negative:'Negative', none:'Unreviewed' };
+
+  const total = Object.values(counts).reduce((a,b) => a+b, 0);
+  if (!total) return;
+
+  const svg = document.getElementById('donut-svg');
+  const legend = document.getElementById('donut-legend');
+  const r = 48, cx = 60, cy = 60, stroke = 20;
+  const circum = 2 * Math.PI * r;
+
+  let offset = 0;
+  // Remove placeholder circle
+  svg.innerHTML = '';
+
+  // Background
+  const bg = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  bg.setAttribute('cx',cx); bg.setAttribute('cy',cy); bg.setAttribute('r',r);
+  bg.setAttribute('fill','none'); bg.setAttribute('stroke','#1a1a2e');
+  bg.setAttribute('stroke-width',stroke);
+  svg.appendChild(bg);
+
+  legend.innerHTML = '';
+
+  Object.entries(counts).forEach(([key, val]) => {
+    if (!val) return;
+    const pct = val / total;
+    const dash = pct * circum;
+    const gap  = circum - dash;
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',r);
+    circle.setAttribute('fill','none');
+    circle.setAttribute('stroke', colors[key]);
+    circle.setAttribute('stroke-width', stroke);
+    circle.setAttribute('stroke-dasharray', `${dash} ${gap}`);
+    circle.setAttribute('stroke-dashoffset', -offset * circum);
+    circle.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+    svg.appendChild(circle);
+    offset += pct;
+
+    // Legend
+    const li = document.createElement('div');
+    li.className = 'legend-item';
+    li.innerHTML = `
+      <div class="legend-dot" style="background:${colors[key]}"></div>
+      <span class="legend-label">${labels[key]}</span>
+      <span class="legend-val">${val} (${(pct*100).toFixed(0)}%)</span>
+    `;
+    legend.appendChild(li);
+  });
+
+  document.getElementById('sentiment-chart').style.display = 'block';
+}
+
+async function loadStats() {
+  // Stats are computed in loadHistory
+}
+
+function logout() {
+  localStorage.removeItem('cm_token');
+  localStorage.removeItem('cm_user');
+  window.location.href = '../index.html';
+}
+</script>
+</body>
+</html>

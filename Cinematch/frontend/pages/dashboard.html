@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineMatch — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:      #09090e;
+      --deep:     #0e0e18;
+      --panel:    #12121e;
+      --card:     #15151f;
+      --border:   rgba(255,255,255,0.07);
+      --gold:     #c9a84c;
+      --gold-dim: #7a6330;
+      --amber:    #e8b84b;
+      --text:     #d4cfc8;
+      --muted:    #5a5760;
+      --dim:      #3a3840;
+      --success:  #5cad7f;
+      --error:    #e05c5c;
+      --warn:     #d4875a;
+      --ff-title: 'Bebas Neue', sans-serif;
+      --ff-body:  'Cormorant Garamond', serif;
+      --ff-mono:  'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--ink);
+      color: var(--text);
+      font-family: var(--ff-body);
+      font-size: 17px;
+      min-height: 100vh;
+    }
+
+    /* ─── TOPBAR ─── */
+    .topbar {
+      position: sticky;
+      top: 0; z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(9,9,14,0.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-logo {
+      font-family: var(--ff-title);
+      font-size: 28px;
+      letter-spacing: 6px;
+      color: var(--gold);
+    }
+
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-link {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 16px;
+      transition: color 0.2s;
+      text-decoration: none;
+    }
+    .nav-link:hover { color: var(--gold); }
+    .nav-link.active { color: var(--gold); }
+
+    .nav-sep { width: 1px; height: 16px; background: var(--border); }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px 6px 6px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+    }
+
+    .user-avatar {
+      width: 28px; height: 28px;
+      background: rgba(201,168,76,0.15);
+      border: 1px solid var(--gold-dim);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--ff-title);
+      font-size: 14px;
+      color: var(--gold);
+    }
+
+    .user-name {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--text);
+      letter-spacing: 1px;
+    }
+
+    .btn-logout {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      cursor: pointer;
+      padding: 4px 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .btn-logout:hover { color: var(--error); }
+
+    /* ─── MAIN LAYOUT ─── */
+    .main {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 64px);
+    }
+
+    /* ─── LEFT SIDEBAR ─── */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      position: sticky;
+      top: 64px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--dim) transparent;
+    }
+
+    .sidebar-section-title {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Mood Input */
+    .mood-box {
+      position: relative;
+    }
+
+    .mood-textarea {
+      width: 100%;
+      min-height: 100px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 14px;
+      color: var(--text);
+      font-family: var(--ff-body);
+      font-size: 15px;
+      font-style: italic;
+      resize: none;
+      outline: none;
+      line-height: 1.6;
+      transition: border-color 0.2s;
+    }
+    .mood-textarea:focus { border-color: var(--gold-dim); }
+    .mood-textarea::placeholder { color: var(--muted); }
+
+    .mood-detect-btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mood-detect-btn:hover {
+      background: rgba(201,168,76,0.08);
+    }
+
+    /* Mood result pill */
+    .mood-result {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: rgba(201,168,76,0.06);
+      border: 1px solid rgba(201,168,76,0.15);
+      border-radius: 2px;
+      animation: fadeIn 0.3s ease;
+    }
+    .mood-result.show { display: flex; }
+
+    .mood-emoji { font-size: 20px; }
+
+    .mood-info { flex: 1; }
+    .mood-label {
+      font-family: var(--ff-title);
+      font-size: 18px;
+      letter-spacing: 3px;
+      color: var(--gold);
+      display: block;
+    }
+    .mood-genres {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Dropdowns / Selects */
+    .filter-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .filter-label {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .filter-select {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: var(--ff-body);
+      font-size: 15px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a84c'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      transition: border-color 0.2s;
+    }
+    .filter-select:focus { border-color: var(--gold-dim); }
+
+    /* Recommend button */
+    .btn-recommend {
+      width: 100%;
+      padding: 16px;
+      background: var(--gold);
+      border: none;
+      color: var(--ink);
+      font-family: var(--ff-title);
+      font-size: 22px;
+      letter-spacing: 6px;
+      cursor: pointer;
+      transition: all 0.25s;
+      border-radius: 2px;
+    }
+    .btn-recommend:hover {
+      background: var(--amber);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(201,168,76,0.25);
+    }
+    .btn-recommend:active { transform: translateY(0); }
+    .btn-recommend:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* History mini list */
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      transition: border-color 0.2s;
+    }
+    .history-item:hover { border-color: var(--dim); }
+    .history-dot {
+      width: 6px; height: 6px;
+      background: var(--gold-dim);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .history-title {
+      font-size: 14px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ─── RIGHT CONTENT AREA ─── */
+    .content {
+      padding: 40px 40px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+    }
+
+    /* Section header */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-family: var(--ff-title);
+      font-size: 36px;
+      letter-spacing: 4px;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .section-count {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--muted);
+    }
+
+    /* ─── MOVIE GRID ─── */
+    .movie-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    /* Empty / loading states */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+      border: 1px dashed var(--dim);
+      border-radius: 2px;
+    }
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+      opacity: 0.4;
+    }
+    .empty-state-text {
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--muted);
+    }
+
+    /* ─── MOVIE CARD ─── */
+    .movie-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+      animation: cardIn 0.4s ease both;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .movie-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--gold-dim);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    }
+
+    /* Poster area */
+    .card-poster {
+      width: 100%;
+      aspect-ratio: 2/3;
+      background: var(--deep);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-poster-inner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Generative poster art — each card gets a unique gradient based on genres */
+    .card-poster-art {
+      position: absolute;
+      inset: 0;
+      opacity: 0.7;
+    }
+
+    .card-poster-genre-icon {
+      font-size: 36px;
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+    }
+
+    /* Score badge */
+    .card-score-badge {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: rgba(9,9,14,0.85);
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      padding: 3px 7px;
+      letter-spacing: 1px;
+      border-radius: 1px;
+    }
+
+    /* Card body */
+    .card-body {
+      padding: 14px;
+    }
+
+    .card-title {
+      font-family: var(--ff-body);
+      font-weight: 600;
+      font-size: 15px;
+      line-height: 1.3;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-genres {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Star rating widget */
+    .star-row {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .star {
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--dim);
+      transition: color 0.1s, transform 0.1s;
+      line-height: 1;
+    }
+    .star:hover,
+    .star.hovered,
+    .star.rated { color: var(--gold); }
+    .star:hover { transform: scale(1.2); }
+
+    .rate-label {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+    .rate-label.rated-text { color: var(--gold); }
+
+    /* Review button */
+    .btn-review {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 7px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-review:hover {
+      border-color: var(--gold-dim);
+      color: var(--gold);
+    }
+
+    /* ─── LOADING OVERLAY ─── */
+    .loading-overlay {
+      display: none;
+      grid-column: 1 / -1;
+    }
+    .loading-overlay.show { display: block; }
+
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .skeleton-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .skeleton-poster {
+      width: 100%;
+      aspect-ratio: 2/3;
+      background: linear-gradient(90deg, var(--deep) 25%, var(--panel) 50%, var(--deep) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    .skeleton-body { padding: 14px; }
+    .skeleton-line {
+      height: 12px;
+      background: linear-gradient(90deg, var(--deep) 25%, var(--panel) 50%, var(--deep) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 1px;
+      margin-bottom: 8px;
+    }
+    .skeleton-line.short { width: 60%; }
+
+    @keyframes shimmer {
+      to { background-position: -200% 0; }
+    }
+
+    /* ─── REVIEW MODAL ─── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(9,9,14,0.85);
+      backdrop-filter: blur(8px);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      width: 100%;
+      max-width: 520px;
+      padding: 36px;
+      animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.94) translateY(16px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-title {
+      font-family: var(--ff-title);
+      font-size: 28px;
+      letter-spacing: 4px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .modal-movie {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--gold);
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+
+    .modal-textarea {
+      width: 100%;
+      min-height: 120px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 14px;
+      color: var(--text);
+      font-family: var(--ff-body);
+      font-size: 16px;
+      resize: vertical;
+      outline: none;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+    .modal-textarea:focus { border-color: var(--gold-dim); }
+    .modal-textarea::placeholder { color: var(--muted); font-style: italic; }
+
+    /* Sentiment result in modal */
+    .sentiment-result {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      margin-bottom: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+    .sentiment-result.show { display: flex; }
+    .sentiment-emoji { font-size: 28px; }
+    .sentiment-info { flex: 1; }
+    .sentiment-label {
+      font-family: var(--ff-title);
+      font-size: 20px;
+      letter-spacing: 3px;
+      display: block;
+    }
+    .sentiment-label.positive { color: var(--success); }
+    .sentiment-label.negative { color: var(--error); }
+    .sentiment-label.neutral  { color: var(--warn); }
+
+    .sentiment-bar-wrap {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .sentiment-bar {
+      height: 3px;
+      border-radius: 1px;
+      transition: width 0.6s ease;
+    }
+    .sentiment-bar.pos { background: var(--success); }
+    .sentiment-bar.neu { background: var(--warn); }
+    .sentiment-bar.neg { background: var(--error); }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .btn-cancel {
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-cancel:hover { border-color: var(--dim); color: var(--text); }
+
+    .btn-submit {
+      padding: 12px;
+      background: var(--gold);
+      border: none;
+      color: var(--ink);
+      font-family: var(--ff-title);
+      font-size: 18px;
+      letter-spacing: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-submit:hover { background: var(--amber); }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ─── PREDICTED RATING BADGE ─── */
+    .predicted-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: rgba(201,168,76,0.06);
+      border: 1px solid rgba(201,168,76,0.12);
+      border-radius: 1px;
+      margin-top: 8px;
+    }
+    .predicted-badge.show { display: flex; }
+    .predicted-badge-label {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .predicted-badge-value {
+      font-family: var(--ff-title);
+      font-size: 16px;
+      letter-spacing: 2px;
+      color: var(--gold);
+    }
+
+    /* ─── TOAST NOTIFICATION ─── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 14px 20px;
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text);
+      z-index: 1000;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-width: 300px;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error   { border-left: 3px solid var(--error); }
+    .toast.info    { border-left: 3px solid var(--gold); }
+
+    /* ─── HELPERS ─── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .topbar { padding: 0 20px; }
+      .content { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<header class="topbar">
+  <div class="topbar-logo">CINEMATCH</div>
+  <nav class="topbar-nav">
+    <a class="nav-link active" href="#">Discover</a>
+    <div class="nav-sep"></div>
+    <a class="nav-link" href="history.html">History</a>
+    <div class="nav-sep"></div>
+    <div class="user-badge">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <span class="user-name" id="user-name">—</span>
+    </div>
+    <button class="btn-logout" onclick="logout()">Exit</button>
+  </nav>
+</header>
+
+<!-- ── MAIN LAYOUT ── -->
+<div class="main">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- Mood Input -->
+    <div>
+      <div class="sidebar-section-title">How are you feeling?</div>
+      <div class="mood-box">
+        <textarea class="mood-textarea" id="mood-input"
+          placeholder="I feel excited and want something thrilling…"
+          rows="4"></textarea>
+        <button class="mood-detect-btn" onclick="detectMood()">
+          <span class="spinner" id="mood-spinner" style="display:none"></span>
+          Detect Mood
+        </button>
+        <div class="mood-result" id="mood-result">
+          <div class="mood-emoji" id="mood-emoji">🎬</div>
+          <div class="mood-info">
+            <span class="mood-label" id="mood-label">—</span>
+            <div class="mood-genres" id="mood-genres">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div>
+      <div class="sidebar-section-title">Preferences</div>
+      <div class="filter-row">
+        <div>
+          <label class="filter-label">Genre</label>
+          <select class="filter-select" id="filter-genre">
+            <option value="">All Genres</option>
+            <option>Action</option>
+            <option>Adventure</option>
+            <option>Animation</option>
+            <option>Comedy</option>
+            <option>Crime</option>
+            <option>Drama</option>
+            <option>Fantasy</option>
+            <option>Horror</option>
+            <option>Mystery</option>
+            <option>Romance</option>
+            <option>Sci-Fi</option>
+            <option>Thriller</option>
+          </select>
+        </div>
+        <div>
+          <label class="filter-label">Language</label>
+          <select class="filter-select" id="filter-lang">
+            <option value="">All Languages</option>
+            <option>English</option>
+            <option>French</option>
+            <option>Spanish</option>
+            <option>Hindi</option>
+            <option>Japanese</option>
+            <option>Chinese</option>
+          </select>
+        </div>
+        <div>
+          <label class="filter-label">Based on movie</label>
+          <select class="filter-select" id="filter-movie">
+            <option value="">Pick a liked movie…</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommend Button -->
+    <button class="btn-recommend" onclick="getRecommendations()">
+      Recommend
+    </button>
+
+    <!-- Watch History (mini) -->
+    <div>
+      <div class="sidebar-section-title">Recently Watched</div>
+      <div class="history-list" id="history-list">
+        <div style="font-family:var(--ff-mono);font-size:11px;color:var(--muted);letter-spacing:1px;">
+          No history yet.
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── CONTENT ── -->
+  <main class="content">
+
+    <!-- Recommendations Section -->
+    <section id="recs-section">
+      <div class="section-header">
+        <div class="section-title">Recommendations</div>
+        <div class="section-count" id="recs-count"></div>
+      </div>
+
+      <!-- Skeleton loading -->
+      <div class="loading-overlay" id="recs-loading">
+        <div class="skeleton-grid">
+          <div class="skeleton-card" style="animation-delay:0s">
+            <div class="skeleton-poster"></div>
+            <div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+          </div>
+          <div class="skeleton-card" style="animation-delay:0.1s">
+            <div class="skeleton-poster"></div>
+            <div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+          </div>
+          <div class="skeleton-card" style="animation-delay:0.2s">
+            <div class="skeleton-poster"></div>
+            <div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+          </div>
+          <div class="skeleton-card" style="animation-delay:0.3s">
+            <div class="skeleton-poster"></div>
+            <div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Movie grid -->
+      <div class="movie-grid" id="recs-grid">
+        <div class="empty-state">
+          <span class="empty-state-icon">🎬</span>
+          <div class="empty-state-text">Tell us your mood and hit Recommend</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- All Movies Section -->
+    <section id="all-movies-section">
+      <div class="section-header">
+        <div class="section-title">All Films</div>
+        <div class="section-count" id="all-count"></div>
+      </div>
+      <div class="movie-grid" id="all-grid">
+        <div class="empty-state">
+          <span class="empty-state-icon">🎞</span>
+          <div class="empty-state-text">Loading catalogue…</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── REVIEW MODAL ── -->
+<div class="modal-overlay" id="review-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">Write Review</div>
+    <div class="modal-movie" id="modal-movie-title">—</div>
+
+    <textarea class="modal-textarea" id="review-text"
+      placeholder="Share your thoughts about this film…"
+      oninput="liveAnalyze(this.value)"></textarea>
+
+    <div class="sentiment-result" id="sentiment-result">
+      <div class="sentiment-emoji" id="sent-emoji">😐</div>
+      <div class="sentiment-info">
+        <span class="sentiment-label" id="sent-label">Neutral</span>
+        <div class="sentiment-bar-wrap">
+          <div class="sentiment-bar neg" id="bar-neg" style="width:33%"></div>
+          <div class="sentiment-bar neu" id="bar-neu" style="width:33%"></div>
+          <div class="sentiment-bar pos" id="bar-pos" style="width:33%"></div>
+        </div>
+      </div>
+      <div style="font-family:var(--ff-mono);font-size:10px;color:var(--muted);letter-spacing:1px;" id="sent-conf">—%</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-review-btn" onclick="submitReview()">
+        <span>Submit</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIG & STATE
+// ════════════════════════════════════════════════════════
+const API   = 'http://localhost:5000/api';
+const DEMO  = true; // Set false when Flask is running
+
+let state = {
+  user:          null,
+  token:         null,
+  recommendations: [],
+  allMovies:     [],
+  userRatings:   {},
+  currentMovieId: null,
+  detectedMood:  null,
+  analyzeTimer:  null,
+};
+
+// Genre → emoji mapping
+const GENRE_EMOJI = {
+  Action:'⚔️', Adventure:'🗺️', Animation:'✨', Comedy:'😂', Crime:'🔎',
+  Drama:'🎭', Fantasy:'🧙', Horror:'👻', Mystery:'🔍', Romance:'💕',
+  'Sci-Fi':'🚀', Thriller:'🔪', Children:'🧸', Family:'🏡', Musical:'🎵',
+  Documentary:'📽️', Western:'🤠', War:'🪖'
+};
+
+// Genre → gradient mapping for poster art
+const GENRE_GRADIENT = {
+  Action:    'linear-gradient(135deg,#1a0a0a 0%,#3d1515 50%,#1a0a0a 100%)',
+  Adventure: 'linear-gradient(135deg,#0a1a0a 0%,#153d20 50%,#0a1a0a 100%)',
+  Animation: 'linear-gradient(135deg,#0a0a1a 0%,#151540 50%,#0a0a1a 100%)',
+  Comedy:    'linear-gradient(135deg,#1a150a 0%,#3d3015 50%,#1a150a 100%)',
+  Crime:     'linear-gradient(135deg,#0a0a0a 0%,#202020 50%,#0a0a0a 100%)',
+  Drama:     'linear-gradient(135deg,#15100a 0%,#3d2810 50%,#15100a 100%)',
+  Fantasy:   'linear-gradient(135deg,#0f0a1a 0%,#25153d 50%,#0f0a1a 100%)',
+  Horror:    'linear-gradient(135deg,#150505 0%,#330808 50%,#150505 100%)',
+  Romance:   'linear-gradient(135deg,#1a0a10 0%,#3d1525 50%,#1a0a10 100%)',
+  'Sci-Fi':  'linear-gradient(135deg,#0a1520 0%,#103040 50%,#0a1520 100%)',
+  Thriller:  'linear-gradient(135deg,#100a15 0%,#281535 50%,#100a15 100%)',
+  default:   'linear-gradient(135deg,#0f0f18 0%,#1a1a30 50%,#0f0f18 100%)',
+};
+
+const MOOD_EMOJI_MAP = {
+  happy:'😄', sad:'😢', excited:'🤩', bored:'😑', stressed:'😰'
+};
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+(function init() {
+  state.token = localStorage.getItem('cm_token');
+  state.user  = JSON.parse(localStorage.getItem('cm_user') || 'null');
+
+  if (!state.token) {
+    window.location.href = '../index.html';
+    return;
+  }
+
+  // Populate user info
+  if (state.user) {
+    document.getElementById('user-name').textContent  = state.user.name;
+    document.getElementById('user-avatar').textContent = state.user.name?.[0]?.toUpperCase() || '?';
+  }
+
+  loadAllMovies();
+  loadHistory();
+})();
+
+// ════════════════════════════════════════════════════════
+// API HELPER
+// ════════════════════════════════════════════════════════
+async function apiFetch(endpoint, options = {}) {
+  try {
+    const res = await fetch(`${API}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`,
+        ...(options.headers || {}),
+      }
+    });
+    return await res.json();
+  } catch (err) {
+    // Return demo data when API is offline
+    return getDemoData(endpoint);
+  }
+}
+
+function getDemoData(endpoint) {
+  // Demo movies for offline development
+  const demoMovies = [
+    { id:1,  title:'Toy Story (1995)',           genres:'Adventure|Animation|Children|Comedy', language:'English', score: 0.82 },
+    { id:6,  title:'Heat (1995)',                genres:'Action|Crime|Thriller',               language:'English', score: 0.75 },
+    { id:10, title:'GoldenEye (1995)',           genres:'Action|Adventure|Thriller',           language:'English', score: 0.71 },
+    { id:16, title:'Casino (1995)',              genres:'Crime|Drama',                          language:'English', score: 0.68 },
+    { id:2,  title:'Jumanji (1995)',             genres:'Adventure|Children|Fantasy',           language:'English', score: 0.65 },
+    { id:21, title:'Get Shorty (1995)',          genres:'Comedy|Crime|Thriller',               language:'English', score: 0.61 },
+    { id:17, title:'Sense and Sensibility (1995)',genres:'Drama|Romance',                      language:'English', score: 0.58 },
+    { id:29, title:'City of Lost Children (1995)',genres:'Adventure|Drama|Fantasy|Mystery',    language:'French',  score: 0.54 },
+    { id:3,  title:'Grumpier Old Men (1995)',    genres:'Comedy|Romance',                      language:'English', score: 0.50 },
+    { id:13, title:'Balto (1995)',               genres:'Adventure|Animation|Children',        language:'English', score: 0.46 },
+  ];
+
+  if (endpoint.includes('recommend')) {
+    return { recommendations: demoMovies.slice(0,8), detected_mood: 'excited', total: 8, algorithm: 'hybrid' };
+  }
+  if (endpoint.includes('movies')) {
+    return { movies: demoMovies, total: demoMovies.length };
+  }
+  if (endpoint.includes('history')) {
+    return { history: [], total: 0 };
+  }
+  if (endpoint.includes('predict_rating')) {
+    return { predicted_rating: (3 + Math.random()*2).toFixed(1), movie_title: 'Sample Movie' };
+  }
+  if (endpoint.includes('analyze_review')) {
+    return { sentiment: 'positive', confidence: 82.3, emoji: '😊', probabilities: { negative:10, neutral:7.7, positive:82.3 } };
+  }
+  return {};
+}
+
+// ════════════════════════════════════════════════════════
+// MOOD DETECTION
+// ════════════════════════════════════════════════════════
+async function detectMood() {
+  const text = document.getElementById('mood-input').value.trim();
+  if (!text) { showToast('Please describe how you feel.', 'info'); return; }
+
+  document.getElementById('mood-spinner').style.display = 'inline-block';
+
+  let data;
+  try {
+    const res = await fetch(`${API}/detect_mood`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    data = await res.json();
+  } catch {
+    data = { mood: 'excited', confidence: 75, recommended_genres: ['Action','Thriller'], message: 'Demo mood detection' };
+  }
+
+  document.getElementById('mood-spinner').style.display = 'none';
+
+  state.detectedMood = data.mood;
+  document.getElementById('mood-emoji').textContent  = MOOD_EMOJI_MAP[data.mood] || '🎬';
+  document.getElementById('mood-label').textContent  = data.mood?.toUpperCase() || '—';
+  document.getElementById('mood-genres').textContent = (data.recommended_genres || []).join(' · ');
+  document.getElementById('mood-result').classList.add('show');
+}
+
+// ════════════════════════════════════════════════════════
+// RECOMMENDATIONS
+// ════════════════════════════════════════════════════════
+async function getRecommendations() {
+  const moodText = document.getElementById('mood-input').value.trim();
+  const genre    = document.getElementById('filter-genre').value;
+  const language = document.getElementById('filter-lang').value;
+  const likedMovieSelect = document.getElementById('filter-movie');
+  const likedMovie = likedMovieSelect.options[likedMovieSelect.selectedIndex]?.text || '';
+
+  // Show loading skeleton
+  document.getElementById('recs-grid').innerHTML = '';
+  document.getElementById('recs-loading').classList.add('show');
+  document.getElementById('recs-count').textContent = '';
+
+  const data = await apiFetch('/recommend', {
+    method: 'POST',
+    body: JSON.stringify({
+      mood_text:  moodText,
+      genre:      genre,
+      language:   language,
+      liked_movie: likedMovie !== 'Pick a liked movie…' ? likedMovie : '',
+      top_n:      10
+    })
+  });
+
+  document.getElementById('recs-loading').classList.remove('show');
+
+  state.recommendations = data.recommendations || [];
+
+  if (data.detected_mood) {
+    state.detectedMood = data.detected_mood;
+    document.getElementById('mood-emoji').textContent  = MOOD_EMOJI_MAP[data.detected_mood] || '🎬';
+    document.getElementById('mood-label').textContent  = data.detected_mood.toUpperCase();
+    document.getElementById('mood-result').classList.add('show');
+  }
+
+  renderMovieGrid('recs-grid', state.recommendations, 'recs-count');
+  document.getElementById('recs-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ════════════════════════════════════════════════════════
+// LOAD ALL MOVIES
+// ════════════════════════════════════════════════════════
+async function loadAllMovies() {
+  const data = await apiFetch('/movies?limit=30');
+  state.allMovies = data.movies || [];
+  renderMovieGrid('all-grid', state.allMovies, 'all-count');
+
+  // Populate "liked movie" dropdown
+  const select = document.getElementById('filter-movie');
+  state.allMovies.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.title;
+    select.appendChild(opt);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER MOVIE GRID
+// ════════════════════════════════════════════════════════
+function renderMovieGrid(gridId, movies, countId) {
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+
+  if (countId) {
+    document.getElementById(countId).textContent = movies.length
+      ? `${movies.length} film${movies.length !== 1 ? 's' : ''}`
+      : '';
+  }
+
+  if (!movies.length) {
+    grid.innerHTML = `<div class="empty-state">
+      <span class="empty-state-icon">🎞</span>
+      <div class="empty-state-text">No films match your criteria</div>
+    </div>`;
+    return;
+  }
+
+  movies.forEach((movie, idx) => {
+    const card = buildMovieCard(movie, idx);
+    grid.appendChild(card);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// BUILD MOVIE CARD
+// ════════════════════════════════════════════════════════
+function buildMovieCard(movie, idx) {
+  const genres = (movie.genres || '').split('|');
+  const primaryGenre = genres[0] || 'Drama';
+  const emoji = GENRE_EMOJI[primaryGenre] || '🎬';
+  const gradient = GENRE_GRADIENT[primaryGenre] || GENRE_GRADIENT.default;
+  const score = movie.score ? (movie.score * 100).toFixed(0) : null;
+  const savedRating = state.userRatings[movie.id] || 0;
+
+  const card = document.createElement('div');
+  card.className = 'movie-card';
+  card.style.animationDelay = `${idx * 0.06}s`;
+
+  card.innerHTML = `
+    <div class="card-poster">
+      <div class="card-poster-inner">
+        <div class="card-poster-art" style="background:${gradient}"></div>
+        <div class="card-poster-genre-icon">${emoji}</div>
+      </div>
+      ${score ? `<div class="card-score-badge">${score}%</div>` : ''}
+    </div>
+    <div class="card-body">
+      <div class="card-title">${movie.title}</div>
+      <div class="card-genres">${genres.slice(0,3).join(' · ')}</div>
+
+      <div class="star-row" id="stars-${movie.id}" data-rating="${savedRating}">
+        ${[1,2,3,4,5].map(n => `<span class="star${n <= savedRating ? ' rated' : ''}"
+          onclick="rateMovie(${movie.id}, ${n})"
+          onmouseenter="hoverStars(${movie.id}, ${n})"
+          onmouseleave="unhoverStars(${movie.id})">★</span>`).join('')}
+        <span class="rate-label ${savedRating ? 'rated-text' : ''}" id="rate-label-${movie.id}">
+          ${savedRating ? savedRating + '/5' : 'Rate'}
+        </span>
+      </div>
+
+      <div class="predicted-badge" id="pred-${movie.id}">
+        <span class="predicted-badge-label">ML Prediction</span>
+        <span class="predicted-badge-value" id="pred-val-${movie.id}">—</span>
+      </div>
+
+      <button class="btn-review" onclick="openReviewModal(${movie.id}, '${movie.title.replace(/'/g,"\\'")}')">
+        + Write Review
+      </button>
+    </div>
+  `;
+
+  // Load predicted rating on card hover
+  card.addEventListener('mouseenter', () => fetchPredictedRating(movie.id));
+
+  return card;
+}
+
+// ════════════════════════════════════════════════════════
+// STAR RATING
+// ════════════════════════════════════════════════════════
+function hoverStars(movieId, n) {
+  const stars = document.querySelectorAll(`#stars-${movieId} .star`);
+  stars.forEach((s, i) => s.classList.toggle('hovered', i < n));
+}
+
+function unhoverStars(movieId) {
+  const stars = document.querySelectorAll(`#stars-${movieId} .star`);
+  const current = parseInt(document.getElementById(`stars-${movieId}`).dataset.rating || 0);
+  stars.forEach((s, i) => {
+    s.classList.remove('hovered');
+    s.classList.toggle('rated', i < current);
+  });
+}
+
+async function rateMovie(movieId, rating) {
+  state.userRatings[movieId] = rating;
+
+  // Update star UI
+  const row = document.getElementById(`stars-${movieId}`);
+  if (row) {
+    row.dataset.rating = rating;
+    const stars = row.querySelectorAll('.star');
+    stars.forEach((s, i) => s.classList.toggle('rated', i < rating));
+    const label = document.getElementById(`rate-label-${movieId}`);
+    if (label) {
+      label.textContent = `${rating}/5`;
+      label.className = 'rate-label rated-text';
+    }
+  }
+
+  showToast(`Rated ${rating} ★`, 'success');
+
+  // Send to API
+  await apiFetch('/rate_movie', {
+    method: 'POST',
+    body: JSON.stringify({ movie_id: movieId, rating })
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// PREDICTED RATING (lazy load on hover)
+// ════════════════════════════════════════════════════════
+const predictedCache = {};
+
+async function fetchPredictedRating(movieId) {
+  if (predictedCache[movieId]) return;
+  predictedCache[movieId] = true; // prevent double-fetch
+
+  const data = await apiFetch('/predict_rating', {
+    method: 'POST',
+    body: JSON.stringify({ movie_id: movieId })
+  });
+
+  const badge = document.getElementById(`pred-${movieId}`);
+  const val   = document.getElementById(`pred-val-${movieId}`);
+  if (badge && val && data.predicted_rating) {
+    val.textContent = `${data.predicted_rating} ★`;
+    badge.classList.add('show');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// REVIEW MODAL
+// ════════════════════════════════════════════════════════
+function openReviewModal(movieId, movieTitle) {
+  state.currentMovieId = movieId;
+  document.getElementById('modal-movie-title').textContent = movieTitle;
+  document.getElementById('review-text').value = '';
+  document.getElementById('sentiment-result').classList.remove('show');
+  document.getElementById('review-modal').classList.add('open');
+  document.getElementById('review-text').focus();
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('review-modal')) return;
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+// Live sentiment analysis as user types
+function liveAnalyze(text) {
+  clearTimeout(state.analyzeTimer);
+  if (text.length < 15) {
+    document.getElementById('sentiment-result').classList.remove('show');
+    return;
+  }
+  state.analyzeTimer = setTimeout(() => runSentimentAnalysis(text), 700);
+}
+
+async function runSentimentAnalysis(text) {
+  const data = await apiFetch('/analyze_review', {
+    method: 'POST',
+    body: JSON.stringify({ review_text: text })
+  });
+
+  if (!data.sentiment) return;
+
+  const result = document.getElementById('sentiment-result');
+  result.classList.add('show');
+
+  document.getElementById('sent-emoji').textContent = data.emoji || '😐';
+  const label = document.getElementById('sent-label');
+  label.textContent  = data.sentiment.toUpperCase();
+  label.className    = `sentiment-label ${data.sentiment}`;
+  document.getElementById('sent-conf').textContent = (data.confidence || 0).toFixed(0) + '%';
+
+  // Update bars
+  const p = data.probabilities || {};
+  document.getElementById('bar-neg').style.width = (p.negative || 33) + '%';
+  document.getElementById('bar-neu').style.width = (p.neutral  || 33) + '%';
+  document.getElementById('bar-pos').style.width = (p.positive || 33) + '%';
+}
+
+async function submitReview() {
+  const text = document.getElementById('review-text').value.trim();
+  if (!text || text.length < 10) {
+    showToast('Please write a longer review.', 'info');
+    return;
+  }
+
+  const btn = document.getElementById('submit-review-btn');
+  btn.disabled = true;
+  btn.querySelector('span').innerHTML = '<span class="spinner"></span>';
+
+  const data = await apiFetch('/submit_review', {
+    method: 'POST',
+    body: JSON.stringify({ movie_id: state.currentMovieId, review_text: text })
+  });
+
+  btn.disabled = false;
+  btn.querySelector('span').textContent = 'Submit';
+
+  document.getElementById('review-modal').classList.remove('open');
+  showToast(`Review submitted · ${data.sentiment || 'positive'}`, 'success');
+}
+
+// ════════════════════════════════════════════════════════
+// WATCH HISTORY
+// ════════════════════════════════════════════════════════
+async function loadHistory() {
+  const data = await apiFetch('/get_history?limit=6');
+  const list = document.getElementById('history-list');
+
+  if (!data.history?.length) {
+    list.innerHTML = `<div style="font-family:var(--ff-mono);font-size:11px;color:var(--muted);letter-spacing:1px;">No history yet.</div>`;
+    return;
+  }
+
+  list.innerHTML = data.history.map(h => `
+    <div class="history-item">
+      <div class="history-dot"></div>
+      <div class="history-title">${h.title || 'Movie #' + h.movie_id}</div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// TOAST NOTIFICATION
+// ════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent  = msg;
+  toast.className    = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 3000);
+}
+
+// ════════════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════════════
+function logout() {
+  localStorage.removeItem('cm_token');
+  localStorage.removeItem('cm_user');
+  window.location.href = '../index.html';
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('review-modal').classList.remove('open');
+});
+</script>
+</body>
+</html>

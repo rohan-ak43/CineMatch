@@ -1,0 +1,17 @@
+{
+  "best_model": "Linear Regression",
+  "rmse": 1.3202,
+  "mae": 1.1031,
+  "features": [
+    "user_avg_rating",
+    "user_rating_count",
+    "user_rating_std",
+    "movie_avg_rating",
+    "movie_popularity",
+    "movie_rating_std",
+    "genre_encoded",
+    "language_encoded",
+    "user_movie_avg_diff"
+  ],
+  "needs_scaling": true
+}

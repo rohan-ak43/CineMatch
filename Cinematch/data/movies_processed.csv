@@ -1,0 +1,31 @@
+movieId,title,genres,genre_clean,title_clean,overview,content_soup
+1,Toy Story (1995),Adventure|Animation|Children|Comedy|Fantasy,Adventure Animation Children Comedy Fantasy,Toy Story,,Adventure Animation Children Comedy Fantasy Toy Story 
+2,Jumanji (1995),Adventure|Children|Fantasy,Adventure Children Fantasy,Jumanji,,Adventure Children Fantasy Jumanji 
+3,Grumpier Old Men (1995),Comedy|Romance,Comedy Romance,Grumpier Old Men,,Comedy Romance Grumpier Old Men 
+4,Waiting to Exhale (1995),Comedy|Drama|Romance,Comedy Drama Romance,Waiting to Exhale,,Comedy Drama Romance Waiting to Exhale 
+5,Father of the Bride Part II (1995),Comedy,Comedy,Father of the Bride Part II,,Comedy Father of the Bride Part II 
+6,Heat (1995),Action|Crime|Thriller,Action Crime Thriller,Heat,,Action Crime Thriller Heat 
+7,Sabrina (1995),Comedy|Romance,Comedy Romance,Sabrina,,Comedy Romance Sabrina 
+8,Tom and Huck (1995),Adventure|Children,Adventure Children,Tom and Huck,,Adventure Children Tom and Huck 
+9,Sudden Death (1995),Action,Action,Sudden Death,,Action Sudden Death 
+10,GoldenEye (1995),Action|Adventure|Thriller,Action Adventure Thriller,GoldenEye,,Action Adventure Thriller GoldenEye 
+11,"American President, The (1995)",Comedy|Drama|Romance,Comedy Drama Romance,"American President, The",,"Comedy Drama Romance American President, The "
+12,Dracula: Dead and Loving It (1995),Comedy|Horror,Comedy Horror,Dracula: Dead and Loving It,,Comedy Horror Dracula: Dead and Loving It 
+13,Balto (1995),Adventure|Animation|Children,Adventure Animation Children,Balto,,Adventure Animation Children Balto 
+14,Nixon (1995),Drama,Drama,Nixon,,Drama Nixon 
+15,Cutthroat Island (1995),Action|Adventure|Romance,Action Adventure Romance,Cutthroat Island,,Action Adventure Romance Cutthroat Island 
+16,Casino (1995),Crime|Drama,Crime Drama,Casino,,Crime Drama Casino 
+17,Sense and Sensibility (1995),Drama|Romance,Drama Romance,Sense and Sensibility,,Drama Romance Sense and Sensibility 
+18,Four Rooms (1995),Comedy|Mystery,Comedy Mystery,Four Rooms,,Comedy Mystery Four Rooms 
+19,Ace Ventura: When Nature Calls (1995),Comedy,Comedy,Ace Ventura: When Nature Calls,,Comedy Ace Ventura: When Nature Calls 
+20,Money Train (1995),Action|Comedy|Crime|Drama|Thriller,Action Comedy Crime Drama Thriller,Money Train,,Action Comedy Crime Drama Thriller Money Train 
+21,Get Shorty (1995),Comedy|Crime|Thriller,Comedy Crime Thriller,Get Shorty,,Comedy Crime Thriller Get Shorty 
+22,Copycat (1995),Crime|Drama|Thriller,Crime Drama Thriller,Copycat,,Crime Drama Thriller Copycat 
+23,Assassins (1995),Action|Thriller,Action Thriller,Assassins,,Action Thriller Assassins 
+24,Powder (1995),Drama|Sci-Fi,Drama Sci-Fi,Powder,,Drama Sci-Fi Powder 
+25,Leaving Las Vegas (1995),Drama|Romance,Drama Romance,Leaving Las Vegas,,Drama Romance Leaving Las Vegas 
+26,Othello (1995),Drama|Romance,Drama Romance,Othello,,Drama Romance Othello 
+27,Now and Then (1995),Children|Comedy|Drama,Children Comedy Drama,Now and Then,,Children Comedy Drama Now and Then 
+28,Persuasion (1995),Drama|Romance,Drama Romance,Persuasion,,Drama Romance Persuasion 
+29,City of Lost Children (1995),Adventure|Drama|Fantasy|Mystery|Sci-Fi,Adventure Drama Fantasy Mystery Sci-Fi,City of Lost Children,,Adventure Drama Fantasy Mystery Sci-Fi City of Lost Children 
+30,Shanghai Triad (1995),Crime|Drama,Crime Drama,Shanghai Triad,,Crime Drama Shanghai Triad 

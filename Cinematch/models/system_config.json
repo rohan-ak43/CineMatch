@@ -1,0 +1,41 @@
+{
+  "models_available": [
+    "tfidf_vectorizer",
+    "cosine_sim_matrix",
+    "movie_indices",
+    "knn_user_model",
+    "mood_classifier",
+    "mood_tfidf",
+    "mood_genre_map",
+    "rating_predictor",
+    "sentiment_classifier",
+    "sentiment_tfidf",
+    "user_movie_matrix"
+  ],
+  "hybrid_weights": {
+    "content_based": 0.35,
+    "collaborative": 0.35,
+    "popularity": 0.3
+  },
+  "mood_labels": [
+    "happy",
+    "sad",
+    "excited",
+    "bored",
+    "stressed"
+  ],
+  "sentiment_labels": [
+    "negative",
+    "neutral",
+    "positive"
+  ],
+  "supported_languages": [
+    "English"
+  ],
+  "dataset_stats": {
+    "total_movies": 30,
+    "total_ratings": 351,
+    "total_users": 50,
+    "avg_rating": 2.72
+  }
+}

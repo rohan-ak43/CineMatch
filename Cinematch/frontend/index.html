@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineMatch — Find Your Film</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:        #0a0a0f;
+      --deep:       #0f0f1a;
+      --panel:      #13131f;
+      --border:     rgba(255,255,255,0.07);
+      --gold:       #c9a84c;
+      --gold-dim:   #8a6f32;
+      --amber:      #e8b84b;
+      --text:       #d4cfc8;
+      --muted:      #6b6760;
+      --error:      #e05c5c;
+      --success:    #5cad7f;
+      --ff-display: 'Bebas Neue', sans-serif;
+      --ff-body:    'Cormorant Garamond', serif;
+      --ff-mono:    'DM Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--ink);
+      color: var(--text);
+      font-family: var(--ff-body);
+      font-size: 18px;
+      overflow: hidden;
+    }
+
+    /* ── FILM STRIP BACKGROUND ── */
+    .scene {
+      position: fixed; inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 0;
+    }
+
+    .bg-strips {
+      position: absolute; inset: 0;
+      overflow: hidden;
+    }
+
+    .strip {
+      position: absolute;
+      top: -20%;
+      width: 4px;
+      height: 140%;
+      background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(201,168,76,0.04) 20%,
+        rgba(201,168,76,0.12) 50%,
+        rgba(201,168,76,0.04) 80%,
+        transparent 100%
+      );
+      animation: drift linear infinite;
+    }
+
+    .strip:nth-child(1)  { left: 8%;   animation-duration: 18s; animation-delay: 0s; }
+    .strip:nth-child(2)  { left: 16%;  animation-duration: 24s; animation-delay: -4s; width: 2px; }
+    .strip:nth-child(3)  { left: 28%;  animation-duration: 20s; animation-delay: -8s; }
+    .strip:nth-child(4)  { left: 40%;  animation-duration: 16s; animation-delay: -2s; width: 1px; opacity: 0.5; }
+    .strip:nth-child(5)  { left: 52%;  animation-duration: 22s; animation-delay: -6s; }
+    .strip:nth-child(6)  { left: 64%;  animation-duration: 19s; animation-delay: -10s; width: 2px; }
+    .strip:nth-child(7)  { left: 76%;  animation-duration: 25s; animation-delay: -1s; }
+    .strip:nth-child(8)  { left: 88%;  animation-duration: 21s; animation-delay: -7s; width: 1px; opacity: 0.5; }
+
+    @keyframes drift {
+      from { transform: translateY(-10%); }
+      to   { transform: translateY(10%); }
+    }
+
+    /* Radial vignette */
+    .vignette {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 70% at 50% 50%,
+        transparent 30%,
+        rgba(10,10,15,0.6) 70%,
+        rgba(10,10,15,0.95) 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── CENTER CARD ── */
+    .card-wrap {
+      position: relative; z-index: 10;
+      width: 100%;
+      max-width: 440px;
+      padding: 0 24px;
+    }
+
+    /* Logotype */
+    .logotype {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-title {
+      font-family: var(--ff-display);
+      font-size: 72px;
+      letter-spacing: 12px;
+      color: var(--gold);
+      line-height: 1;
+      text-shadow: 0 0 60px rgba(201,168,76,0.3);
+    }
+
+    .logo-sub {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    /* Gold rule */
+    .rule {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 32px;
+    }
+    .rule::before, .rule::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dim));
+    }
+    .rule::after {
+      background: linear-gradient(90deg, var(--gold-dim), transparent);
+    }
+    .rule-diamond {
+      width: 6px; height: 6px;
+      background: var(--gold);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    /* Tab switcher */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    .tab-btn {
+      padding: 12px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .tab-btn.active {
+      background: rgba(201,168,76,0.08);
+      color: var(--gold);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gold);
+    }
+
+    .tab-btn:hover:not(.active) {
+      color: var(--text);
+      background: rgba(255,255,255,0.03);
+    }
+
+    /* Form panel */
+    .form-panel {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+      animation: fadeUp 0.4s ease;
+    }
+    .form-panel.active { display: flex; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Input fields */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field label {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .field input {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: var(--ff-body);
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      width: 100%;
+    }
+
+    .field input:focus {
+      border-color: var(--gold-dim);
+      background: rgba(201,168,76,0.05);
+    }
+
+    .field input::placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .field input.error-input {
+      border-color: var(--error);
+    }
+
+    /* Submit button */
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: transparent;
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      font-family: var(--ff-display);
+      font-size: 20px;
+      letter-spacing: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gold);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .btn-primary:hover::before { transform: scaleX(1); }
+    .btn-primary:hover { color: var(--ink); border-color: var(--gold); }
+    .btn-primary span { position: relative; z-index: 1; }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-primary:disabled::before { display: none; }
+
+    /* Status messages */
+    .status-msg {
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 10px 14px;
+      border-radius: 2px;
+      display: none;
+    }
+    .status-msg.show { display: block; }
+    .status-msg.error {
+      color: var(--error);
+      background: rgba(224,92,92,0.08);
+      border: 1px solid rgba(224,92,92,0.2);
+    }
+    .status-msg.success {
+      color: var(--success);
+      background: rgba(92,173,127,0.08);
+      border: 1px solid rgba(92,173,127,0.2);
+    }
+
+    /* Loading spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    /* Footer note */
+    .auth-footer {
+      text-align: center;
+      margin-top: 28px;
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted);
+    }
+
+    /* Scroll hint on mobile */
+    @media (max-height: 640px) {
+      html, body { overflow: auto; }
+      .scene { min-height: 100%; position: relative; align-items: flex-start; padding: 40px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="scene">
+  <!-- Animated background strips -->
+  <div class="bg-strips">
+    <div class="strip"></div>
+    <div class="strip"></div>
+    <div class="strip"></div>
+    <div class="strip"></div>
+    <div class="strip"></div>
+    <div class="strip"></div>
+    <div class="strip"></div>
+    <div class="strip"></div>
+  </div>
+  <div class="vignette"></div>
+
+  <!-- Auth Card -->
+  <div class="card-wrap">
+    <div class="logotype">
+      <div class="logo-title">CINEMATCH</div>
+      <div class="logo-sub">Intelligent Film Discovery</div>
+    </div>
+
+    <div class="rule"><div class="rule-diamond"></div></div>
+
+    <!-- Tab Switcher -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab-btn" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div class="form-panel active" id="panel-login">
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <div class="status-msg" id="login-status"></div>
+      <button class="btn-primary" id="login-btn" onclick="handleLogin()">
+        <span>Enter</span>
+      </button>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div class="form-panel" id="panel-register">
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Your name" autocomplete="name"/>
+      </div>
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Min. 6 characters" autocomplete="new-password"/>
+      </div>
+      <div class="status-msg" id="reg-status"></div>
+      <button class="btn-primary" id="reg-btn" onclick="handleRegister()">
+        <span>Create Account</span>
+      </button>
+    </div>
+
+    <div class="auth-footer">
+      Powered by Machine Learning · CineMatch v1.0
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:5000/api';
+
+  // ── TAB SWITCHING ──
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+      b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+    });
+    document.getElementById('panel-login').classList.toggle('active', tab === 'login');
+    document.getElementById('panel-register').classList.toggle('active', tab === 'register');
+    clearStatus();
+  }
+
+  function clearStatus() {
+    document.querySelectorAll('.status-msg').forEach(el => {
+      el.className = 'status-msg';
+      el.textContent = '';
+    });
+  }
+
+  function showStatus(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = `status-msg ${type} show`;
+  }
+
+  function setLoading(btnId, loading, text) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.querySelector('span').innerHTML = loading
+      ? `<span class="spinner"></span>${text}`
+      : text;
+  }
+
+  // ── LOGIN ──
+  async function handleLogin() {
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    if (!email || !password) {
+      showStatus('login-status', 'Please fill in all fields.', 'error');
+      return;
+    }
+
+    setLoading('login-btn', true, 'Authenticating…');
+
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('cm_token', data.token);
+        localStorage.setItem('cm_user', JSON.stringify(data.user));
+        showStatus('login-status', '✓ Welcome back, ' + data.user.name, 'success');
+        setTimeout(() => { window.location.href = 'pages/dashboard.html'; }, 800);
+      } else {
+        showStatus('login-status', data.error || 'Login failed.', 'error');
+        setLoading('login-btn', false, 'Enter');
+      }
+    } catch (err) {
+      // Dev mode: bypass auth when API not running
+      if (err.name === 'TypeError') {
+        showStatus('login-status', '⚠ API offline — entering demo mode', 'success');
+        localStorage.setItem('cm_token', 'demo-token');
+        localStorage.setItem('cm_user', JSON.stringify({ id: 1, name: 'Demo User', email }));
+        setTimeout(() => { window.location.href = 'pages/dashboard.html'; }, 800);
+      } else {
+        showStatus('login-status', 'Connection error. Is the server running?', 'error');
+        setLoading('login-btn', false, 'Enter');
+      }
+    }
+  }
+
+  // ── REGISTER ──
+  async function handleRegister() {
+    const name     = document.getElementById('reg-name').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+
+    if (!name || !email || !password) {
+      showStatus('reg-status', 'Please fill in all fields.', 'error');
+      return;
+    }
+    if (password.length < 6) {
+      showStatus('reg-status', 'Password must be at least 6 characters.', 'error');
+      return;
+    }
+
+    setLoading('reg-btn', true, 'Creating Account…');
+
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('cm_token', data.token);
+        localStorage.setItem('cm_user', JSON.stringify(data.user));
+        showStatus('reg-status', '✓ Account created! Redirecting…', 'success');
+        setTimeout(() => { window.location.href = 'pages/dashboard.html'; }, 800);
+      } else {
+        showStatus('reg-status', data.error || 'Registration failed.', 'error');
+        setLoading('reg-btn', false, 'Create Account');
+      }
+    } catch (err) {
+      showStatus('reg-status', '⚠ API offline — entering demo mode', 'success');
+      localStorage.setItem('cm_token', 'demo-token');
+      localStorage.setItem('cm_user', JSON.stringify({ id: 1, name, email }));
+      setTimeout(() => { window.location.href = 'pages/dashboard.html'; }, 800);
+    }
+  }
+
+  // Allow Enter key submission
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const isLogin = document.getElementById('panel-login').classList.contains('active');
+    isLogin ? handleLogin() : handleRegister();
+  });
+
+  // Auto-redirect if already logged in
+  if (localStorage.getItem('cm_token')) {
+    window.location.href = 'pages/dashboard.html';
+  }
+</script>
+</body>
+</html>
