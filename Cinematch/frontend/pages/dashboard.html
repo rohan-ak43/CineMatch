@@ -865,11 +865,21 @@
             <option>Chinese</option>
           </select>
         </div>
-        <div>
-          <label class="filter-label">Based on movie</label>
-          <select class="filter-select" id="filter-movie">
-            <option value="">Pick a liked movie…</option>
-          </select>
+        <div style="position:relative">
+          <label class="filter-label">Based on movie (search from 463 films)</label>
+          <input type="text" id="movie-search-input" class="filter-select"
+            placeholder="Search 463 movies…"
+            autocomplete="off"
+            oninput="filterMovieSuggestions(this.value)"
+            onfocus="showSuggestions()"
+            style="padding-right:30px"/>
+          <div id="movie-suggestions" style="
+            display:none;position:absolute;top:100%;left:0;right:0;z-index:200;
+            background:var(--panel);border:1px solid var(--border);
+            max-height:200px;overflow-y:auto;scrollbar-width:thin;
+            scrollbar-color:var(--dim) transparent;
+          "></div>
+          <input type="hidden" id="filter-movie" value=""/>
         </div>
       </div>
     </div>
@@ -938,12 +948,48 @@
         <div class="section-title">All Films</div>
         <div class="section-count" id="all-count"></div>
       </div>
+
+      <!-- Search + filter bar -->
+      <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+        <input type="text" id="all-search" placeholder="Search 463 films…"
+          oninput="filterAllMovies()"
+          style="flex:1;min-width:180px;padding:10px 14px;
+            background:rgba(255,255,255,0.03);border:1px solid var(--border);
+            border-radius:2px;color:var(--text);font-family:var(--ff-body);
+            font-size:15px;outline:none;"/>
+        <select id="all-genre-filter" onchange="filterAllMovies()"
+          style="padding:10px 14px;background:rgba(255,255,255,0.03);
+            border:1px solid var(--border);border-radius:2px;color:var(--text);
+            font-family:var(--ff-body);font-size:15px;outline:none;cursor:pointer">
+          <option value="">All Genres</option>
+          <option>Action</option><option>Adventure</option><option>Animation</option>
+          <option>Comedy</option><option>Crime</option><option>Drama</option>
+          <option>Fantasy</option><option>Horror</option><option>Musical</option>
+          <option>Mystery</option><option>Romance</option><option>Sci-Fi</option>
+          <option>Thriller</option><option>War</option><option>Western</option>
+        </select>
+        <select id="all-lang-filter" onchange="filterAllMovies()"
+          style="padding:10px 14px;background:rgba(255,255,255,0.03);
+            border:1px solid var(--border);border-radius:2px;color:var(--text);
+            font-family:var(--ff-body);font-size:15px;outline:none;cursor:pointer">
+          <option value="">All Languages</option>
+          <option>English</option><option>Hindi</option><option>Tamil</option>
+          <option>Telugu</option><option>Japanese</option><option>Korean</option>
+          <option>French</option><option>Spanish</option><option>Italian</option>
+          <option>Chinese</option><option>German</option><option>Portuguese</option>
+          <option>Kannada</option>
+        </select>
+      </div>
+
       <div class="movie-grid" id="all-grid">
         <div class="empty-state">
           <span class="empty-state-icon">🎞</span>
           <div class="empty-state-text">Loading catalogue…</div>
         </div>
       </div>
+
+      <!-- Pagination -->
+      <div id="all-pagination" style="display:flex;justify-content:center;gap:10px;margin-top:32px;flex-wrap:wrap"></div>
     </section>
 
   </main>
@@ -1065,43 +1111,707 @@ async function apiFetch(endpoint, options = {}) {
         ...(options.headers || {}),
       }
     });
+    if (!res.ok) throw new Error('API error');
     return await res.json();
   } catch (err) {
-    // Return demo data when API is offline
-    return getDemoData(endpoint);
+    // Flask offline — run everything locally in the browser
+    return getDemoData(endpoint, options.body);
   }
 }
 
-function getDemoData(endpoint) {
-  // Demo movies for offline development
-  const demoMovies = [
-    { id:1,  title:'Toy Story (1995)',           genres:'Adventure|Animation|Children|Comedy', language:'English', score: 0.82 },
-    { id:6,  title:'Heat (1995)',                genres:'Action|Crime|Thriller',               language:'English', score: 0.75 },
-    { id:10, title:'GoldenEye (1995)',           genres:'Action|Adventure|Thriller',           language:'English', score: 0.71 },
-    { id:16, title:'Casino (1995)',              genres:'Crime|Drama',                          language:'English', score: 0.68 },
-    { id:2,  title:'Jumanji (1995)',             genres:'Adventure|Children|Fantasy',           language:'English', score: 0.65 },
-    { id:21, title:'Get Shorty (1995)',          genres:'Comedy|Crime|Thriller',               language:'English', score: 0.61 },
-    { id:17, title:'Sense and Sensibility (1995)',genres:'Drama|Romance',                      language:'English', score: 0.58 },
-    { id:29, title:'City of Lost Children (1995)',genres:'Adventure|Drama|Fantasy|Mystery',    language:'French',  score: 0.54 },
-    { id:3,  title:'Grumpier Old Men (1995)',    genres:'Comedy|Romance',                      language:'English', score: 0.50 },
-    { id:13, title:'Balto (1995)',               genres:'Adventure|Animation|Children',        language:'English', score: 0.46 },
-  ];
+// ════════════════════════════════════════════════════════
+// CLIENT-SIDE MOOD ENGINE
+// Runs entirely in the browser — no Flask needed.
+// Uses keyword matching with weighted scoring, same logic
+// as the Python Logistic Regression model but in JS.
+// ════════════════════════════════════════════════════════
+
+const MOOD_KEYWORDS = {
+  happy: {
+    words: ['happy','joy','joyful','great','wonderful','amazing','fantastic','blessed',
+            'cheerful','excited','love','loved','beautiful','positive','grateful',
+            'ecstatic','delighted','elated','brilliant','awesome','good','nice',
+            'pleased','content','thrilled','glad','enjoy','enjoying'],
+    genres: ['Comedy','Family','Animation','Music','Romance'],
+    message: 'Light-hearted movies to keep those good vibes going!'
+  },
+  sad: {
+    words: ['sad','depressed','depression','lonely','alone','cry','crying','tears',
+            'heartbroken','miserable','hopeless','empty','lost','grief','grieving',
+            'melancholy','sorrowful','down','blue','upset','broken','hurt','pain',
+            'devastated','unhappy','gloomy','dark','terrible','awful','bad','miss'],
+    genres: ['Drama','Romance','Family','Animation'],
+    message: 'Heartwarming films to comfort and lift your spirits.'
+  },
+  excited: {
+    words: ['excited','pumped','thrilled','hyped','stoked','energetic','adrenaline',
+            'adventure','rush','fire','fired','electric','passionate','enthusiastic',
+            'ready','raring','psyched','buzz','buzzing','wild','intense','alive',
+            'wired','exhilarating','dynamic','motivated','charged','unstoppable'],
+    genres: ['Action','Thriller','Adventure','Sci-Fi','Fantasy'],
+    message: 'High-energy films to match your excitement!'
+  },
+  bored: {
+    words: ['bored','boring','dull','monotonous','uninterested','restless','nothing',
+            'routine','flat','sluggish','lethargic','unstimulated','indifferent',
+            'pointless','aimless','listless','zoned','vegetating','wasting','meh',
+            'whatever','unengaged','same','tired','uninspired','stagnant','idle'],
+    genres: ['Comedy','Adventure','Fantasy','Mystery','Animation'],
+    message: 'Engaging films to cure your boredom!'
+  },
+  stressed: {
+    words: ['stressed','stress','anxious','anxiety','worried','worry','overwhelmed',
+            'pressure','burnout','burned','exhausted','panicking','panic','tense',
+            'nervous','frantic','frazzled','wound','overload','deadline','chaos',
+            'racing','mind','breathe','calm','relax','too much','can\'t cope'],
+    genres: ['Comedy','Animation','Family','Documentary'],
+    message: 'Relaxing films to help you unwind and decompress.'
+  }
+};
+
+// Full movie catalogue — 463 real films, loaded from movies_processed.csv
+// Used as fallback when Flask is offline. Flask API serves same data when running.
+const ALL_DEMO_MOVIES = [
+  {id:1, title:'Die Hard (1988)', genres:'Action|Thriller', language:'English'},
+  {id:2, title:'Mad Max: Fury Road (2015)', genres:'Action|Adventure|Sci-Fi|Thriller', language:'English'},
+  {id:3, title:'The Dark Knight (2008)', genres:'Action|Crime|Drama|Thriller', language:'English'},
+  {id:4, title:'Inception (2010)', genres:'Action|Adventure|Sci-Fi|Thriller', language:'English'},
+  {id:5, title:'John Wick (2014)', genres:'Action|Crime|Thriller', language:'English'},
+  {id:6, title:'Mission: Impossible - Fallout (2018)', genres:'Action|Adventure|Thriller', language:'English'},
+  {id:7, title:'The Avengers (2012)', genres:'Action|Adventure|Sci-Fi', language:'English'},
+  {id:8, title:'Gladiator (2000)', genres:'Action|Adventure|Drama', language:'English'},
+  {id:9, title:'The Matrix (1999)', genres:'Action|Sci-Fi', language:'English'},
+  {id:10, title:'Speed (1994)', genres:'Action|Crime|Thriller', language:'English'},
+  {id:11, title:'Top Gun: Maverick (2022)', genres:'Action|Drama', language:'English'},
+  {id:12, title:'Black Panther (2018)', genres:'Action|Adventure|Sci-Fi', language:'English'},
+  {id:13, title:'Iron Man (2008)', genres:'Action|Adventure|Sci-Fi', language:'English'},
+  {id:14, title:'Captain America: Civil War (2016)', genres:'Action|Adventure|Sci-Fi', language:'English'},
+  {id:15, title:'The Raid: Redemption (2011)', genres:'Action|Crime|Thriller', language:'English'},
+  {id:16, title:'Heat (1995)', genres:'Action|Crime|Drama|Thriller', language:'English'},
+  {id:17, title:'Terminator 2: Judgment Day (1991)', genres:'Action|Sci-Fi|Thriller', language:'English'},
+  {id:18, title:'RoboCop (1987)', genres:'Action|Crime|Sci-Fi|Thriller', language:'English'},
+  {id:19, title:'Lethal Weapon (1987)', genres:'Action|Comedy|Crime|Thriller', language:'English'},
+  {id:20, title:'Point Break (1991)', genres:'Action|Crime|Thriller', language:'English'},
+  {id:21, title:'Indiana Jones and the Raiders of the Lost Ark (1981)', genres:'Action|Adventure', language:'English'},
+  {id:22, title:'The Lord of the Rings: The Fellowship of the Ring (2001)', genres:'Adventure|Fantasy', language:'English'},
+  {id:23, title:'Pirates of the Caribbean: The Curse of the Black Pearl (2003)', genres:'Action|Adventure|Fantasy', language:'English'},
+  {id:24, title:'Jurassic Park (1993)', genres:'Action|Adventure|Sci-Fi|Thriller', language:'English'},
+  {id:25, title:'The Revenant (2015)', genres:'Adventure|Drama|Thriller', language:'English'},
+  {id:26, title:'Into the Wild (2007)', genres:'Adventure|Biography|Drama', language:'English'},
+  {id:27, title:'Cast Away (2000)', genres:'Adventure|Drama', language:'English'},
+  {id:28, title:'The Martian (2015)', genres:'Adventure|Drama|Sci-Fi', language:'English'},
+  {id:29, title:'Interstellar (2014)', genres:'Adventure|Drama|Sci-Fi', language:'English'},
+  {id:30, title:'Avatar (2009)', genres:'Action|Adventure|Fantasy|Sci-Fi', language:'English'},
+  {id:31, title:'Dune (2021)', genres:'Adventure|Drama|Sci-Fi', language:'English'},
+  {id:32, title:'The Princess Bride (1987)', genres:'Adventure|Comedy|Fantasy|Romance', language:'English'},
+  {id:33, title:'Treasure Planet (2002)', genres:'Adventure|Animation|Fantasy|Sci-Fi', language:'English'},
+  {id:34, title:'National Treasure (2004)', genres:'Action|Adventure|Mystery|Thriller', language:'English'},
+  {id:35, title:'Romancing the Stone (1984)', genres:'Action|Adventure|Comedy|Romance', language:'English'},
+  {id:36, title:'Toy Story (1995)', genres:'Adventure|Animation|Children|Comedy|Fantasy', language:'English'},
+  {id:37, title:'The Lion King (1994)', genres:'Adventure|Animation|Children|Drama|Musical', language:'English'},
+  {id:38, title:'Spirited Away (2001)', genres:'Adventure|Animation|Children|Fantasy|Mystery', language:'Japanese'},
+  {id:39, title:'Finding Nemo (2003)', genres:'Adventure|Animation|Children|Comedy', language:'English'},
+  {id:40, title:'WALL-E (2008)', genres:'Adventure|Animation|Children|Romance|Sci-Fi', language:'English'},
+  {id:41, title:'Up (2009)', genres:'Adventure|Animation|Children|Comedy|Drama', language:'English'},
+  {id:42, title:'Inside Out (2015)', genres:'Adventure|Animation|Children|Comedy|Drama', language:'English'},
+  {id:43, title:'Coco (2017)', genres:'Adventure|Animation|Children|Comedy|Fantasy|Musical', language:'English'},
+  {id:44, title:'Howl\'s Moving Castle (2004)', genres:'Adventure|Animation|Children|Fantasy|Romance', language:'English'},
+  {id:45, title:'My Neighbor Totoro (1988)', genres:'Adventure|Animation|Children|Fantasy', language:'Japanese'},
+  {id:46, title:'Shrek (2001)', genres:'Adventure|Animation|Children|Comedy|Fantasy|Romance', language:'English'},
+  {id:47, title:'Kung Fu Panda (2008)', genres:'Action|Adventure|Animation|Children|Comedy', language:'English'},
+  {id:48, title:'Zootopia (2016)', genres:'Adventure|Animation|Children|Comedy|Mystery', language:'English'},
+  {id:49, title:'The Incredibles (2004)', genres:'Action|Adventure|Animation|Children|Comedy', language:'English'},
+  {id:50, title:'Moana (2016)', genres:'Adventure|Animation|Children|Comedy|Fantasy|Musical', language:'English'},
+  {id:51, title:'Frozen (2013)', genres:'Adventure|Animation|Children|Comedy|Fantasy|Musical|Romance', language:'English'},
+  {id:52, title:'Ratatouille (2007)', genres:'Adventure|Animation|Children|Comedy|Drama', language:'English'},
+  {id:53, title:'Princess Mononoke (1997)', genres:'Action|Adventure|Animation|Drama|Fantasy', language:'Japanese'},
+  {id:54, title:'Akira (1988)', genres:'Action|Animation|Drama|Sci-Fi|Thriller', language:'Japanese'},
+  {id:55, title:'Ghost in the Shell (1995)', genres:'Animation|Drama|Sci-Fi|Thriller', language:'Japanese'},
+  {id:56, title:'The Grand Budapest Hotel (2014)', genres:'Comedy|Crime|Drama', language:'English'},
+  {id:57, title:'Superbad (2007)', genres:'Comedy', language:'English'},
+  {id:58, title:'Bridesmaids (2011)', genres:'Comedy|Romance', language:'English'},
+  {id:59, title:'The Hangover (2009)', genres:'Comedy', language:'English'},
+  {id:60, title:'Groundhog Day (1993)', genres:'Comedy|Fantasy|Romance', language:'English'},
+  {id:61, title:'Home Alone (1990)', genres:'Children|Comedy', language:'English'},
+  {id:62, title:'Mrs. Doubtfire (1993)', genres:'Comedy|Drama', language:'English'},
+  {id:63, title:'Ferris Bueller\'s Day Off (1986)', genres:'Comedy', language:'English'},
+  {id:64, title:'The Big Lebowski (1998)', genres:'Comedy|Crime', language:'English'},
+  {id:65, title:'Office Space (1999)', genres:'Comedy', language:'English'},
+  {id:66, title:'Anchorman (2004)', genres:'Comedy', language:'English'},
+  {id:67, title:'Mean Girls (2004)', genres:'Comedy', language:'English'},
+  {id:68, title:'Legally Blonde (2001)', genres:'Comedy|Romance', language:'English'},
+  {id:69, title:'Crazy Rich Asians (2018)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:70, title:'The 40-Year-Old Virgin (2005)', genres:'Comedy|Romance', language:'English'},
+  {id:71, title:'Knocked Up (2007)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:72, title:'American Pie (1999)', genres:'Comedy|Romance', language:'English'},
+  {id:73, title:'There\'s Something About Mary (1998)', genres:'Comedy|Romance', language:'English'},
+  {id:74, title:'Monty Python and the Holy Grail (1975)', genres:'Adventure|Comedy|Fantasy', language:'English'},
+  {id:75, title:'Airplane! (1980)', genres:'Comedy', language:'English'},
+  {id:76, title:'The Godfather (1972)', genres:'Crime|Drama', language:'English'},
+  {id:77, title:'Pulp Fiction (1994)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:78, title:'No Country for Old Men (2007)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:79, title:'Fargo (1996)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:80, title:'Se7en (1995)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:81, title:'Zodiac (2007)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:82, title:'L.A. Confidential (1997)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:83, title:'The Silence of the Lambs (1991)', genres:'Crime|Drama|Horror|Thriller', language:'English'},
+  {id:84, title:'Goodfellas (1990)', genres:'Crime|Drama', language:'English'},
+  {id:85, title:'The Departed (2006)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:86, title:'American Gangster (2007)', genres:'Biography|Crime|Drama', language:'English'},
+  {id:87, title:'Drive (2011)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:88, title:'Prisoners (2013)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:89, title:'Gone Girl (2014)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:90, title:'Knives Out (2019)', genres:'Comedy|Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:91, title:'Ocean\'s Eleven (2001)', genres:'Crime|Thriller', language:'English'},
+  {id:92, title:'Catch Me If You Can (2002)', genres:'Biography|Crime|Drama|Thriller', language:'English'},
+  {id:93, title:'The Usual Suspects (1995)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:94, title:'Chinatown (1974)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:95, title:'The Shawshank Redemption (1994)', genres:'Drama', language:'English'},
+  {id:96, title:'Schindler\'s List (1993)', genres:'Biography|Drama|History', language:'English'},
+  {id:97, title:'Forrest Gump (1994)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:98, title:'Good Will Hunting (1997)', genres:'Drama|Romance', language:'English'},
+  {id:99, title:'A Beautiful Mind (2001)', genres:'Biography|Drama|Mystery', language:'English'},
+  {id:100, title:'The Green Mile (1999)', genres:'Crime|Drama|Fantasy|Mystery', language:'English'},
+  {id:101, title:'Whiplash (2014)', genres:'Drama|Music', language:'English'},
+  {id:102, title:'Black Swan (2010)', genres:'Drama|Horror|Mystery|Thriller', language:'English'},
+  {id:103, title:'Marriage Story (2019)', genres:'Drama|Romance', language:'English'},
+  {id:104, title:'Parasite (2019)', genres:'Crime|Drama|Thriller', language:'Korean'},
+  {id:105, title:'1917 (2019)', genres:'Drama|War', language:'English'},
+  {id:106, title:'The Pianist (2002)', genres:'Biography|Drama|War', language:'English'},
+  {id:107, title:'Manchester by the Sea (2016)', genres:'Drama', language:'English'},
+  {id:108, title:'Moonlight (2016)', genres:'Drama', language:'English'},
+  {id:109, title:'Nomadland (2020)', genres:'Drama', language:'English'},
+  {id:110, title:'Roma (2018)', genres:'Drama', language:'English'},
+  {id:111, title:'The Irishman (2019)', genres:'Biography|Crime|Drama', language:'English'},
+  {id:112, title:'There Will Be Blood (2007)', genres:'Drama|Western', language:'English'},
+  {id:113, title:'12 Angry Men (1957)', genres:'Crime|Drama', language:'English'},
+  {id:114, title:'To Kill a Mockingbird (1962)', genres:'Crime|Drama', language:'English'},
+  {id:115, title:'Titanic (1997)', genres:'Drama|Romance', language:'English'},
+  {id:116, title:'La La Land (2016)', genres:'Comedy|Drama|Music|Musical|Romance', language:'English'},
+  {id:117, title:'Eternal Sunshine of the Spotless Mind (2004)', genres:'Drama|Romance|Sci-Fi', language:'English'},
+  {id:118, title:'Before Sunrise (1995)', genres:'Drama|Romance', language:'English'},
+  {id:119, title:'Notting Hill (1999)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:120, title:'When Harry Met Sally (1989)', genres:'Comedy|Romance', language:'English'},
+  {id:121, title:'The Notebook (2004)', genres:'Drama|Romance', language:'English'},
+  {id:122, title:'Pride and Prejudice (2005)', genres:'Drama|Romance', language:'English'},
+  {id:123, title:'About Time (2013)', genres:'Comedy|Drama|Fantasy|Romance', language:'English'},
+  {id:124, title:'Crazy, Stupid, Love (2011)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:125, title:'Her (2013)', genres:'Drama|Romance|Sci-Fi', language:'English'},
+  {id:126, title:'500 Days of Summer (2009)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:127, title:'Silver Linings Playbook (2012)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:128, title:'Atonement (2007)', genres:'Drama|Romance|War', language:'English'},
+  {id:129, title:'Call Me by Your Name (2017)', genres:'Drama|Romance', language:'Japanese'},
+  {id:130, title:'2001: A Space Odyssey (1968)', genres:'Mystery|Sci-Fi', language:'English'},
+  {id:131, title:'Blade Runner (1982)', genres:'Sci-Fi|Thriller', language:'English'},
+  {id:132, title:'Blade Runner 2049 (2017)', genres:'Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:133, title:'Alien (1979)', genres:'Horror|Sci-Fi', language:'English'},
+  {id:134, title:'Aliens (1986)', genres:'Action|Horror|Sci-Fi|Thriller', language:'English'},
+  {id:135, title:'The Thing (1982)', genres:'Horror|Mystery|Sci-Fi', language:'English'},
+  {id:136, title:'Arrival (2016)', genres:'Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:137, title:'Annihilation (2018)', genres:'Adventure|Drama|Horror|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:138, title:'Ex Machina (2014)', genres:'Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:139, title:'Gravity (2013)', genres:'Drama|Sci-Fi|Thriller', language:'English'},
+  {id:140, title:'The Truman Show (1998)', genres:'Comedy|Drama|Sci-Fi', language:'English'},
+  {id:141, title:'Minority Report (2002)', genres:'Action|Crime|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:142, title:'Looper (2012)', genres:'Action|Crime|Drama|Sci-Fi|Thriller', language:'English'},
+  {id:143, title:'District 9 (2009)', genres:'Action|Drama|Sci-Fi|Thriller', language:'English'},
+  {id:144, title:'Children of Men (2006)', genres:'Action|Drama|Sci-Fi|Thriller', language:'English'},
+  {id:145, title:'E.T. the Extra-Terrestrial (1982)', genres:'Children|Drama|Sci-Fi', language:'English'},
+  {id:146, title:'Close Encounters of the Third Kind (1977)', genres:'Drama|Sci-Fi', language:'English'},
+  {id:147, title:'Contact (1997)', genres:'Drama|Mystery|Sci-Fi', language:'English'},
+  {id:148, title:'Moon (2009)', genres:'Drama|Mystery|Sci-Fi', language:'English'},
+  {id:149, title:'The Shining (1980)', genres:'Drama|Horror|Thriller', language:'English'},
+  {id:150, title:'Get Out (2017)', genres:'Horror|Mystery|Thriller', language:'English'},
+  {id:151, title:'Hereditary (2018)', genres:'Drama|Horror|Mystery|Thriller', language:'English'},
+  {id:152, title:'A Quiet Place (2018)', genres:'Drama|Horror|Sci-Fi|Thriller', language:'English'},
+  {id:153, title:'Midsommar (2019)', genres:'Drama|Horror|Mystery|Thriller', language:'English'},
+  {id:154, title:'It (2017)', genres:'Drama|Horror|Thriller', language:'English'},
+  {id:155, title:'The Witch (2015)', genres:'Drama|Horror|Mystery|Thriller', language:'English'},
+  {id:156, title:'Psycho (1960)', genres:'Horror|Mystery|Thriller', language:'English'},
+  {id:157, title:'Halloween (1978)', genres:'Horror|Thriller', language:'English'},
+  {id:158, title:'A Nightmare on Elm Street (1984)', genres:'Fantasy|Horror|Thriller', language:'English'},
+  {id:159, title:'Scream (1996)', genres:'Comedy|Horror|Mystery|Thriller', language:'English'},
+  {id:160, title:'The Conjuring (2013)', genres:'Horror|Mystery|Thriller', language:'English'},
+  {id:161, title:'Sinister (2012)', genres:'Horror|Mystery|Thriller', language:'English'},
+  {id:162, title:'Insidious (2010)', genres:'Horror|Mystery|Thriller', language:'English'},
+  {id:163, title:'Train to Busan (2016)', genres:'Action|Horror|Thriller', language:'Korean'},
+  {id:164, title:'Memento (2000)', genres:'Mystery|Thriller', language:'English'},
+  {id:165, title:'The Sixth Sense (1999)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:166, title:'Shutter Island (2010)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:167, title:'Mulholland Drive (2001)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:168, title:'Rear Window (1954)', genres:'Crime|Mystery|Thriller', language:'English'},
+  {id:169, title:'Vertigo (1958)', genres:'Crime|Mystery|Romance|Thriller', language:'English'},
+  {id:170, title:'The Girl with the Dragon Tattoo (2011)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:171, title:'Sharp Objects (2018)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:172, title:'Glass Onion: A Knives Out Mystery (2022)', genres:'Comedy|Crime|Mystery|Thriller', language:'English'},
+  {id:173, title:'The Prestige (2006)', genres:'Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:174, title:'The Lord of the Rings: The Two Towers (2002)', genres:'Adventure|Fantasy', language:'English'},
+  {id:175, title:'The Lord of the Rings: The Return of the King (2003)', genres:'Adventure|Fantasy', language:'English'},
+  {id:176, title:'Harry Potter and the Sorcerer\'s Stone (2001)', genres:'Adventure|Children|Fantasy', language:'English'},
+  {id:177, title:'Harry Potter and the Prisoner of Azkaban (2004)', genres:'Adventure|Children|Fantasy|Mystery', language:'English'},
+  {id:178, title:'Pan\'s Labyrinth (2006)', genres:'Drama|Fantasy|War', language:'English'},
+  {id:179, title:'Big Fish (2003)', genres:'Drama|Fantasy|Romance', language:'English'},
+  {id:180, title:'Edward Scissorhands (1990)', genres:'Drama|Fantasy|Romance', language:'English'},
+  {id:181, title:'Labyrinth (1986)', genres:'Adventure|Children|Fantasy|Musical', language:'English'},
+  {id:182, title:'The NeverEnding Story (1984)', genres:'Adventure|Children|Drama|Fantasy', language:'English'},
+  {id:183, title:'Willow (1988)', genres:'Action|Adventure|Fantasy', language:'English'},
+  {id:184, title:'March of the Penguins (2005)', genres:'Documentary', language:'English'},
+  {id:185, title:'Jiro Dreams of Sushi (2011)', genres:'Documentary', language:'English'},
+  {id:186, title:'Won\'t You Be My Neighbor? (2018)', genres:'Documentary', language:'English'},
+  {id:187, title:'Free Solo (2018)', genres:'Documentary', language:'English'},
+  {id:188, title:'Making a Murderer (2015)', genres:'Crime|Documentary', language:'English'},
+  {id:189, title:'13th (2016)', genres:'Documentary', language:'English'},
+  {id:190, title:'Bowling for Columbine (2002)', genres:'Documentary', language:'English'},
+  {id:191, title:'An Inconvenient Truth (2006)', genres:'Documentary', language:'English'},
+  {id:192, title:'The Act of Killing (2012)', genres:'Documentary|Drama|War', language:'English'},
+  {id:193, title:'Exit Through the Gift Shop (2010)', genres:'Documentary', language:'English'},
+  {id:194, title:'The Sound of Music (1965)', genres:'Biography|Drama|Musical', language:'English'},
+  {id:195, title:'Singin\' in the Rain (1952)', genres:'Comedy|Musical|Romance', language:'English'},
+  {id:196, title:'Chicago (2002)', genres:'Comedy|Crime|Drama|Musical', language:'English'},
+  {id:197, title:'Grease (1978)', genres:'Comedy|Musical|Romance', language:'English'},
+  {id:198, title:'Bohemian Rhapsody (2018)', genres:'Biography|Drama|Musical', language:'English'},
+  {id:199, title:'Rocketman (2019)', genres:'Biography|Drama|Musical|Romance', language:'English'},
+  {id:200, title:'Mamma Mia! (2008)', genres:'Comedy|Drama|Musical|Romance', language:'English'},
+  {id:201, title:'Les Misérables (2012)', genres:'Drama|History|Musical|Romance|War', language:'English'},
+  {id:202, title:'Into the Woods (2014)', genres:'Adventure|Drama|Fantasy|Musical', language:'English'},
+  {id:203, title:'Moulin Rouge! (2001)', genres:'Drama|Musical|Romance|Thriller', language:'English'},
+  {id:204, title:'Lincoln (2012)', genres:'Biography|Drama|History', language:'English'},
+  {id:205, title:'The Social Network (2010)', genres:'Biography|Drama', language:'English'},
+  {id:206, title:'The Theory of Everything (2014)', genres:'Biography|Drama|Romance', language:'English'},
+  {id:207, title:'Darkest Hour (2017)', genres:'Biography|Drama|History|War', language:'English'},
+  {id:208, title:'Selma (2014)', genres:'Biography|Drama|History', language:'English'},
+  {id:209, title:'Erin Brockovich (2000)', genres:'Biography|Crime|Drama', language:'English'},
+  {id:210, title:'The Imitation Game (2014)', genres:'Biography|Drama|History|Mystery|Thriller|War', language:'English'},
+  {id:211, title:'Rush (2013)', genres:'Biography|Drama|Sport', language:'English'},
+  {id:212, title:'Sully (2016)', genres:'Biography|Drama', language:'English'},
+  {id:213, title:'Saving Private Ryan (1998)', genres:'Action|Drama|War', language:'English'},
+  {id:214, title:'Full Metal Jacket (1987)', genres:'Drama|War', language:'English'},
+  {id:215, title:'Apocalypse Now (1979)', genres:'Drama|War', language:'English'},
+  {id:216, title:'Platoon (1986)', genres:'Drama|War', language:'English'},
+  {id:217, title:'The Hurt Locker (2008)', genres:'Drama|Thriller|War', language:'English'},
+  {id:218, title:'Dunkirk (2017)', genres:'Action|Drama|History|Thriller|War', language:'English'},
+  {id:219, title:'Hacksaw Ridge (2016)', genres:'Biography|Drama|History|War', language:'English'},
+  {id:220, title:'Fury (2014)', genres:'Action|Drama|War', language:'English'},
+  {id:221, title:'Midway (2019)', genres:'Action|Drama|History|War', language:'English'},
+  {id:222, title:'Das Boot (1981)', genres:'Drama|Thriller|War', language:'German'},
+  {id:223, title:'The Parent Trap (1998)', genres:'Children|Comedy|Family|Romance', language:'English'},
+  {id:224, title:'Matilda (1996)', genres:'Children|Comedy|Family|Fantasy', language:'English'},
+  {id:225, title:'Willy Wonka and the Chocolate Factory (1971)', genres:'Children|Comedy|Family|Fantasy|Musical', language:'English'},
+  {id:226, title:'The Wizard of Oz (1939)', genres:'Adventure|Children|Family|Fantasy|Musical', language:'English'},
+  {id:227, title:'Mary Poppins (1964)', genres:'Children|Comedy|Family|Fantasy|Musical', language:'English'},
+  {id:228, title:'Babe (1995)', genres:'Children|Comedy|Drama|Family', language:'English'},
+  {id:229, title:'Stuart Little (1999)', genres:'Adventure|Children|Comedy|Family', language:'English'},
+  {id:230, title:'The Chronicles of Narnia (2005)', genres:'Adventure|Children|Family|Fantasy', language:'English'},
+  {id:231, title:'A Little Princess (1995)', genres:'Children|Drama|Family|Fantasy', language:'English'},
+  {id:232, title:'The Secret Garden (1993)', genres:'Children|Drama|Family|Fantasy', language:'English'},
+  {id:233, title:'The Good, the Bad and the Ugly (1966)', genres:'Western', language:'English'},
+  {id:234, title:'Unforgiven (1992)', genres:'Drama|Western', language:'English'},
+  {id:235, title:'Django Unchained (2012)', genres:'Drama|Western', language:'English'},
+  {id:236, title:'True Grit (2010)', genres:'Adventure|Drama|Western', language:'English'},
+  {id:237, title:'The Hateful Eight (2015)', genres:'Crime|Drama|Mystery|Western', language:'English'},
+  {id:238, title:'Once Upon a Time in the West (1968)', genres:'Drama|Western', language:'English'},
+  {id:239, title:'Dances with Wolves (1990)', genres:'Adventure|Drama|Western', language:'English'},
+  {id:240, title:'Tombstone (1993)', genres:'Action|Drama|History|Western', language:'English'},
+  {id:241, title:'Butch Cassidy and the Sundance Kid (1969)', genres:'Action|Biography|Crime|Drama|Western', language:'English'},
+  {id:242, title:'The Wild Bunch (1969)', genres:'Action|Adventure|Drama|Western', language:'English'},
+  {id:243, title:'Rocky (1976)', genres:'Drama|Sport', language:'English'},
+  {id:244, title:'Raging Bull (1980)', genres:'Biography|Drama|Sport', language:'English'},
+  {id:245, title:'Moneyball (2011)', genres:'Biography|Drama|Sport', language:'English'},
+  {id:246, title:'The Blind Side (2009)', genres:'Biography|Drama|Family|Sport', language:'English'},
+  {id:247, title:'Remember the Titans (2000)', genres:'Biography|Drama|Family|Sport', language:'English'},
+  {id:248, title:'Hoosiers (1986)', genres:'Drama|Sport', language:'English'},
+  {id:249, title:'Rudy (1993)', genres:'Biography|Drama|Family|Sport', language:'English'},
+  {id:250, title:'Jerry Maguire (1996)', genres:'Comedy|Drama|Romance|Sport', language:'English'},
+  {id:251, title:'Bend It Like Beckham (2002)', genres:'Comedy|Drama|Family|Romance|Sport', language:'English'},
+  {id:252, title:'The Karate Kid (1984)', genres:'Action|Children|Drama|Sport', language:'English'},
+  {id:253, title:'City of God (2002)', genres:'Crime|Drama', language:'Portuguese'},
+  {id:254, title:'Amélie (2001)', genres:'Comedy|Romance', language:'English'},
+  {id:255, title:'Cinema Paradiso (1988)', genres:'Drama|Romance', language:'Italian'},
+  {id:256, title:'Life Is Beautiful (1997)', genres:'Comedy|Drama|Romance|War', language:'Italian'},
+  {id:257, title:'Oldboy (2003)', genres:'Action|Drama|Mystery|Thriller', language:'Korean'},
+  {id:258, title:'The Secret in Their Eyes (2009)', genres:'Crime|Drama|Mystery|Romance|Thriller', language:'Spanish'},
+  {id:259, title:'Y Tu Mamá También (2001)', genres:'Drama|Romance', language:'English'},
+  {id:260, title:'Crouching Tiger, Hidden Dragon (2000)', genres:'Action|Adventure|Drama|Fantasy|Romance', language:'Chinese'},
+  {id:261, title:'Fight Club (1999)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:262, title:'American Psycho (2000)', genres:'Crime|Drama|Horror|Mystery|Thriller', language:'English'},
+  {id:263, title:'Donnie Darko (2001)', genres:'Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:264, title:'The Game (1997)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:265, title:'Uncut Gems (2019)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:266, title:'Nightcrawler (2014)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:267, title:'Requiem for a Dream (2000)', genres:'Drama', language:'English'},
+  {id:268, title:'Pi (1998)', genres:'Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:269, title:'Citizen Kane (1941)', genres:'Drama|Mystery', language:'English'},
+  {id:270, title:'Casablanca (1942)', genres:'Drama|Romance|War', language:'English'},
+  {id:271, title:'Sunset Boulevard (1950)', genres:'Drama|Film-Noir', language:'English'},
+  {id:272, title:'Some Like It Hot (1959)', genres:'Comedy|Romance', language:'English'},
+  {id:273, title:'Ben-Hur (1959)', genres:'Action|Adventure|Drama|History', language:'English'},
+  {id:274, title:'Spartacus (1960)', genres:'Action|Drama|History', language:'English'},
+  {id:275, title:'Lawrence of Arabia (1962)', genres:'Adventure|Biography|Drama|History|War', language:'English'},
+  {id:276, title:'Doctor Zhivago (1965)', genres:'Drama|Romance|War', language:'English'},
+  {id:277, title:'Spider-Man: Into the Spider-Verse (2018)', genres:'Action|Adventure|Animation|Sci-Fi', language:'English'},
+  {id:278, title:'The Dark Knight Rises (2012)', genres:'Action|Crime|Drama|Thriller', language:'English'},
+  {id:279, title:'Batman v Superman: Dawn of Justice (2016)', genres:'Action|Adventure|Sci-Fi', language:'English'},
+  {id:280, title:'Guardians of the Galaxy (2014)', genres:'Action|Adventure|Comedy|Sci-Fi', language:'English'},
+  {id:281, title:'Thor: Ragnarok (2017)', genres:'Action|Adventure|Comedy|Sci-Fi', language:'English'},
+  {id:282, title:'Avengers: Infinity War (2018)', genres:'Action|Adventure|Sci-Fi', language:'English'},
+  {id:283, title:'Avengers: Endgame (2019)', genres:'Action|Adventure|Drama|Sci-Fi', language:'English'},
+  {id:284, title:'Doctor Strange (2016)', genres:'Action|Adventure|Fantasy|Sci-Fi', language:'English'},
+  {id:285, title:'Black Widow (2021)', genres:'Action|Adventure|Sci-Fi|Thriller', language:'English'},
+  {id:286, title:'Shang-Chi and the Legend of the Ten Rings (2021)', genres:'Action|Adventure|Fantasy|Sci-Fi', language:'English'},
+  {id:287, title:'Lady Bird (2017)', genres:'Comedy|Drama', language:'English'},
+  {id:288, title:'The Lobster (2015)', genres:'Drama|Romance|Sci-Fi|Thriller', language:'English'},
+  {id:289, title:'Birdman (2014)', genres:'Comedy|Drama|Mystery|Thriller', language:'English'},
+  {id:290, title:'Boyhood (2014)', genres:'Drama', language:'English'},
+  {id:291, title:'Phantom Thread (2017)', genres:'Drama|Romance|Thriller', language:'English'},
+  {id:292, title:'The Power of the Dog (2021)', genres:'Drama|Western', language:'English'},
+  {id:293, title:'Portrait of a Lady on Fire (2019)', genres:'Drama|Romance', language:'English'},
+  {id:294, title:'Aftersun (2022)', genres:'Drama', language:'English'},
+  {id:295, title:'The Italian Job (2003)', genres:'Action|Crime|Thriller', language:'English'},
+  {id:296, title:'Rififi (1955)', genres:'Crime|Drama|Film-Noir|Thriller', language:'English'},
+  {id:297, title:'The Town (2010)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:298, title:'Baby Driver (2017)', genres:'Action|Crime|Drama|Music|Thriller', language:'English'},
+  {id:299, title:'Snatch (2000)', genres:'Comedy|Crime|Thriller', language:'English'},
+  {id:300, title:'Lock, Stock and Two Smoking Barrels (1998)', genres:'Comedy|Crime|Thriller', language:'English'},
+  {id:301, title:'Now You See Me (2013)', genres:'Crime|Mystery|Thriller', language:'English'},
+  {id:302, title:'The Sting (1973)', genres:'Comedy|Crime|Drama', language:'English'},
+  {id:303, title:'The Perks of Being a Wallflower (2012)', genres:'Drama|Romance', language:'English'},
+  {id:304, title:'Stand by Me (1986)', genres:'Adventure|Drama', language:'English'},
+  {id:305, title:'The Breakfast Club (1985)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:306, title:'Sixteen Candles (1984)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:307, title:'Dazed and Confused (1993)', genres:'Comedy|Drama', language:'English'},
+  {id:308, title:'Almost Famous (2000)', genres:'Adventure|Drama|Music|Romance', language:'English'},
+  {id:309, title:'Juno (2007)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:310, title:'Little Miss Sunshine (2006)', genres:'Comedy|Drama', language:'English'},
+  {id:311, title:'The Kings of Summer (2013)', genres:'Adventure|Comedy|Drama', language:'English'},
+  {id:312, title:'Mid90s (2018)', genres:'Drama', language:'English'},
+  {id:313, title:'The Day After Tomorrow (2004)', genres:'Action|Adventure|Sci-Fi|Thriller', language:'English'},
+  {id:314, title:'San Andreas (2015)', genres:'Action|Drama|Thriller', language:'English'},
+  {id:315, title:'2012 (2009)', genres:'Action|Adventure|Sci-Fi|Thriller', language:'English'},
+  {id:316, title:'Twister (1996)', genres:'Action|Adventure|Thriller', language:'English'},
+  {id:317, title:'Armageddon (1998)', genres:'Action|Adventure|Sci-Fi|Thriller', language:'English'},
+  {id:318, title:'Dante\'s Peak (1997)', genres:'Action|Adventure|Thriller', language:'English'},
+  {id:319, title:'The Perfect Storm (2000)', genres:'Action|Adventure|Drama|Thriller', language:'English'},
+  {id:320, title:'Deep Impact (1998)', genres:'Drama|Sci-Fi|Thriller', language:'English'},
+  {id:321, title:'Volcano (1997)', genres:'Action|Thriller', language:'English'},
+  {id:322, title:'Geostorm (2017)', genres:'Action|Sci-Fi|Thriller', language:'English'},
+  {id:323, title:'Interview with the Vampire (1994)', genres:'Drama|Fantasy|Horror', language:'English'},
+  {id:324, title:'Bram Stoker\'s Dracula (1992)', genres:'Fantasy|Horror|Romance', language:'English'},
+  {id:325, title:'Nosferatu (1922)', genres:'Fantasy|Horror', language:'English'},
+  {id:326, title:'Let the Right One In (2008)', genres:'Drama|Fantasy|Horror|Romance', language:'English'},
+  {id:327, title:'What We Do in the Shadows (2014)', genres:'Comedy|Fantasy|Horror', language:'English'},
+  {id:328, title:'Only Lovers Left Alive (2013)', genres:'Drama|Fantasy|Horror|Romance', language:'English'},
+  {id:329, title:'Twilight (2008)', genres:'Drama|Fantasy|Romance', language:'English'},
+  {id:330, title:'New Moon (2009)', genres:'Drama|Fantasy|Romance', language:'English'},
+  {id:331, title:'Underworld (2003)', genres:'Action|Fantasy|Horror|Thriller', language:'English'},
+  {id:332, title:'Blade (1998)', genres:'Action|Fantasy|Horror|Thriller', language:'English'},
+  {id:333, title:'Casino Royale (2006)', genres:'Action|Adventure|Thriller', language:'English'},
+  {id:334, title:'Skyfall (2012)', genres:'Action|Adventure|Thriller', language:'English'},
+  {id:335, title:'No Time to Die (2021)', genres:'Action|Adventure|Thriller', language:'English'},
+  {id:336, title:'Tinker Tailor Soldier Spy (2011)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:337, title:'The Spy Who Came in from the Cold (1965)', genres:'Drama|Mystery|Thriller', language:'English'},
+  {id:338, title:'28 Days Later (2002)', genres:'Drama|Horror|Sci-Fi|Thriller', language:'English'},
+  {id:339, title:'World War Z (2013)', genres:'Action|Drama|Horror|Sci-Fi|Thriller', language:'English'},
+  {id:340, title:'I Am Legend (2007)', genres:'Drama|Horror|Sci-Fi|Thriller', language:'English'},
+  {id:341, title:'The Road (2009)', genres:'Drama|Sci-Fi|Thriller', language:'English'},
+  {id:342, title:'Snowpiercer (2013)', genres:'Action|Drama|Sci-Fi|Thriller', language:'English'},
+  {id:343, title:'Bird Box (2018)', genres:'Drama|Horror|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:344, title:'The Girl with All the Gifts (2016)', genres:'Drama|Fantasy|Horror|Sci-Fi|Thriller', language:'English'},
+  {id:345, title:'Apollo 13 (1995)', genres:'Adventure|Drama|History', language:'English'},
+  {id:346, title:'The Right Stuff (1983)', genres:'Adventure|Drama|History', language:'English'},
+  {id:347, title:'Hidden Figures (2016)', genres:'Biography|Drama|History', language:'English'},
+  {id:348, title:'First Man (2018)', genres:'Biography|Drama|History', language:'English'},
+  {id:349, title:'Ad Astra (2019)', genres:'Adventure|Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:350, title:'Life (2017)', genres:'Horror|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:351, title:'Passengers (2016)', genres:'Adventure|Drama|Romance|Sci-Fi|Thriller', language:'English'},
+  {id:352, title:'Europa Report (2013)', genres:'Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:353, title:'The Midnight Sky (2020)', genres:'Drama|Sci-Fi|Thriller', language:'English'},
+  {id:354, title:'Easy Rider (1969)', genres:'Adventure|Drama', language:'English'},
+  {id:355, title:'Thelma & Louise (1991)', genres:'Adventure|Crime|Drama', language:'English'},
+  {id:356, title:'Planes, Trains and Automobiles (1987)', genres:'Comedy|Drama', language:'English'},
+  {id:357, title:'Wild (2014)', genres:'Adventure|Biography|Drama', language:'English'},
+  {id:358, title:'O Brother, Where Art Thou? (2000)', genres:'Adventure|Comedy|Crime|Drama|Musical', language:'English'},
+  {id:359, title:'Midnight Cowboy (1969)', genres:'Drama', language:'English'},
+  {id:360, title:'Rain Man (1988)', genres:'Drama', language:'English'},
+  {id:361, title:'Lost in Translation (2003)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:362, title:'The Secret Life of Walter Mitty (2013)', genres:'Adventure|Comedy|Drama|Fantasy|Romance', language:'English'},
+  {id:363, title:'This Is Spinal Tap (1984)', genres:'Comedy|Music', language:'English'},
+  {id:364, title:'Best in Show (2000)', genres:'Comedy', language:'English'},
+  {id:365, title:'Borat (2006)', genres:'Comedy', language:'English'},
+  {id:366, title:'Dr. Strangelove (1964)', genres:'Comedy|Drama|War', language:'English'},
+  {id:367, title:'Network (1976)', genres:'Drama|Thriller', language:'English'},
+  {id:368, title:'Wag the Dog (1997)', genres:'Comedy|Drama', language:'English'},
+  {id:369, title:'American Beauty (1999)', genres:'Drama', language:'English'},
+  {id:370, title:'Idiocracy (2006)', genres:'Adventure|Comedy|Sci-Fi', language:'English'},
+  {id:371, title:'Don\'t Look Up (2021)', genres:'Comedy|Drama|Sci-Fi', language:'English'},
+  {id:372, title:'Everything Everywhere All at Once (2022)', genres:'Action|Adventure|Comedy|Drama|Fantasy|Sci-Fi', language:'English'},
+  {id:373, title:'The Batman (2022)', genres:'Action|Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:374, title:'Doctor Strange in the Multiverse of Madness (2022)', genres:'Action|Adventure|Fantasy|Horror|Sci-Fi', language:'English'},
+  {id:375, title:'Nope (2022)', genres:'Horror|Mystery|Sci-Fi|Western', language:'English'},
+  {id:376, title:'The Whale (2022)', genres:'Drama', language:'English'},
+  {id:377, title:'Tár (2022)', genres:'Drama|Music', language:'English'},
+  {id:378, title:'Babylon (2022)', genres:'Comedy|Drama|History', language:'English'},
+  {id:379, title:'All Quiet on the Western Front (2022)', genres:'Drama|War', language:'German'},
+  {id:380, title:'Triangle of Sadness (2022)', genres:'Comedy|Drama|Thriller', language:'English'},
+  {id:381, title:'The Menu (2022)', genres:'Comedy|Horror|Thriller', language:'English'},
+  {id:382, title:'Your Name (2016)', genres:'Animation|Drama|Fantasy|Romance', language:'Japanese'},
+  {id:383, title:'A Silent Voice (2016)', genres:'Animation|Drama|Romance', language:'Japanese'},
+  {id:384, title:'Weathering with You (2019)', genres:'Animation|Drama|Fantasy|Romance', language:'Japanese'},
+  {id:385, title:'Nausicaä of the Valley of the Wind (1984)', genres:'Action|Adventure|Animation|Fantasy|Sci-Fi', language:'English'},
+  {id:386, title:'Castle in the Sky (1986)', genres:'Action|Adventure|Animation|Children|Fantasy|Sci-Fi', language:'Japanese'},
+  {id:387, title:'Grave of the Fireflies (1988)', genres:'Animation|Drama|War', language:'Japanese'},
+  {id:388, title:'Paprika (2006)', genres:'Animation|Fantasy|Sci-Fi|Thriller', language:'Japanese'},
+  {id:389, title:'The End of Evangelion (1997)', genres:'Action|Animation|Drama|Sci-Fi', language:'Japanese'},
+  {id:390, title:'Wolf Children (2012)', genres:'Animation|Drama|Fantasy', language:'Japanese'},
+  {id:391, title:'The Girl Who Leapt Through Time (2006)', genres:'Animation|Drama|Romance|Sci-Fi', language:'Japanese'},
+  {id:392, title:'Dilwale Dulhania Le Jayenge (1995)', genres:'Drama|Musical|Romance', language:'Hindi'},
+  {id:393, title:'Lagaan (2001)', genres:'Drama|Musical|Sport', language:'Hindi'},
+  {id:394, title:'Dil Chahta Hai (2001)', genres:'Comedy|Drama|Romance', language:'Hindi'},
+  {id:395, title:'Mughal-E-Azam (1960)', genres:'Drama|History|Musical|Romance', language:'Hindi'},
+  {id:396, title:'Sholay (1975)', genres:'Action|Adventure|Drama|Western', language:'Hindi'},
+  {id:397, title:'3 Idiots (2009)', genres:'Comedy|Drama', language:'Hindi'},
+  {id:398, title:'Taare Zameen Par (2007)', genres:'Drama|Family', language:'Hindi'},
+  {id:399, title:'Rang De Basanti (2006)', genres:'Drama|History', language:'Hindi'},
+  {id:400, title:'PK (2014)', genres:'Comedy|Drama|Romance|Sci-Fi', language:'Hindi'},
+  {id:401, title:'Queen (2014)', genres:'Adventure|Comedy|Drama|Romance', language:'Hindi'},
+  {id:402, title:'Baahubali: The Beginning (2015)', genres:'Action|Adventure|Drama|Fantasy', language:'Telugu'},
+  {id:403, title:'Baahubali 2: The Conclusion (2017)', genres:'Action|Adventure|Drama|Fantasy', language:'Telugu'},
+  {id:404, title:'Enthiran (2010)', genres:'Action|Drama|Romance|Sci-Fi|Thriller', language:'Tamil'},
+  {id:405, title:'Vikram (2022)', genres:'Action|Crime|Thriller', language:'Tamil'},
+  {id:406, title:'KGF: Chapter 1 (2018)', genres:'Action|Crime|Drama|Thriller', language:'Kannada'},
+  {id:407, title:'KGF: Chapter 2 (2022)', genres:'Action|Crime|Drama|Thriller', language:'Kannada'},
+  {id:408, title:'Master (2021)', genres:'Action|Crime|Drama|Thriller', language:'Tamil'},
+  {id:409, title:'Beast (2022)', genres:'Action|Thriller', language:'Tamil'},
+  {id:410, title:'Roja (1992)', genres:'Drama|Musical|Romance|Thriller', language:'Tamil'},
+  {id:411, title:'Minnale (2001)', genres:'Drama|Romance|Thriller', language:'Tamil'},
+  {id:412, title:'The Wolf of Wall Street (2013)', genres:'Biography|Comedy|Crime|Drama', language:'English'},
+  {id:413, title:'Inglourious Basterds (2009)', genres:'Adventure|Drama|War', language:'English'},
+  {id:414, title:'Kill Bill: Vol. 1 (2003)', genres:'Action|Crime|Thriller', language:'English'},
+  {id:415, title:'Kill Bill: Vol. 2 (2004)', genres:'Action|Crime|Drama|Thriller', language:'English'},
+  {id:416, title:'Reservoir Dogs (1992)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:417, title:'Jackie Brown (1997)', genres:'Crime|Drama|Thriller', language:'English'},
+  {id:418, title:'Hateful Eight (2015)', genres:'Crime|Drama|Mystery|Western', language:'English'},
+  {id:419, title:'Once Upon a Time in Hollywood (2019)', genres:'Comedy|Drama', language:'English'},
+  {id:420, title:'Grindhouse: Planet Terror (2007)', genres:'Action|Horror|Sci-Fi|Thriller', language:'English'},
+  {id:421, title:'North by Northwest (1959)', genres:'Action|Adventure|Mystery|Thriller', language:'English'},
+  {id:422, title:'Rope (1948)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:423, title:'The Birds (1963)', genres:'Drama|Horror|Mystery|Thriller', language:'English'},
+  {id:424, title:'Rebecca (1940)', genres:'Drama|Film-Noir|Mystery|Romance|Thriller', language:'English'},
+  {id:425, title:'Dial M for Murder (1954)', genres:'Crime|Mystery|Thriller', language:'English'},
+  {id:426, title:'Witness for the Prosecution (1957)', genres:'Crime|Drama|Mystery', language:'English'},
+  {id:427, title:'Strangers on a Train (1951)', genres:'Crime|Mystery|Thriller', language:'English'},
+  {id:428, title:'Shadow of a Doubt (1943)', genres:'Crime|Drama|Film-Noir|Mystery|Thriller', language:'English'},
+  {id:429, title:'Notorious (1946)', genres:'Drama|Film-Noir|Romance|Thriller', language:'English'},
+  {id:430, title:'Before Sunset (2004)', genres:'Drama|Romance', language:'English'},
+  {id:431, title:'Before Midnight (2013)', genres:'Drama|Romance', language:'English'},
+  {id:432, title:'Ruby Sparks (2012)', genres:'Comedy|Drama|Fantasy|Romance', language:'English'},
+  {id:433, title:'Warm Bodies (2013)', genres:'Comedy|Horror|Romance|Sci-Fi', language:'English'},
+  {id:434, title:'Crazy Stupid Love (2011)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:435, title:'The Holiday (2006)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:436, title:'Love Actually (2003)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:437, title:'The Shape of Water (2017)', genres:'Adventure|Drama|Fantasy|Romance', language:'English'},
+  {id:438, title:'Crimson Peak (2015)', genres:'Drama|Fantasy|Horror|Mystery|Romance|Thriller', language:'English'},
+  {id:439, title:'Beetlejuice (1988)', genres:'Comedy|Fantasy|Horror', language:'English'},
+  {id:440, title:'Big Eyes (2014)', genres:'Biography|Crime|Drama', language:'English'},
+  {id:441, title:'Ed Wood (1994)', genres:'Biography|Comedy|Drama', language:'English'},
+  {id:442, title:'Batman Returns (1992)', genres:'Action|Adventure|Fantasy', language:'English'},
+  {id:443, title:'Sleepy Hollow (1999)', genres:'Fantasy|Horror|Mystery|Thriller', language:'English'},
+  {id:444, title:'Charlie and the Chocolate Factory (2005)', genres:'Adventure|Children|Comedy|Fantasy|Musical', language:'English'},
+  {id:445, title:'Dumb and Dumber (1994)', genres:'Adventure|Comedy', language:'English'},
+  {id:446, title:'Ace Ventura: Pet Detective (1994)', genres:'Comedy|Crime', language:'English'},
+  {id:447, title:'The Mask (1994)', genres:'Action|Comedy|Crime|Fantasy', language:'English'},
+  {id:448, title:'Liar Liar (1997)', genres:'Comedy|Fantasy', language:'English'},
+  {id:449, title:'Bruce Almighty (2003)', genres:'Comedy|Drama|Fantasy', language:'English'},
+  {id:450, title:'Yes Man (2008)', genres:'Comedy|Drama|Romance', language:'English'},
+  {id:451, title:'The Number 23 (2007)', genres:'Crime|Mystery|Thriller', language:'English'},
+  {id:452, title:'Kick-Ass (2010)', genres:'Action|Comedy|Crime', language:'English'},
+  {id:453, title:'Tenet (2020)', genres:'Action|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:454, title:'Following (1998)', genres:'Crime|Drama|Mystery|Thriller', language:'English'},
+  {id:455, title:'Batman Begins (2005)', genres:'Action|Crime|Drama|Thriller', language:'English'},
+  {id:456, title:'The Matrix Reloaded (2003)', genres:'Action|Sci-Fi|Thriller', language:'English'},
+  {id:457, title:'The Matrix Revolutions (2003)', genres:'Action|Sci-Fi|Thriller', language:'English'},
+  {id:458, title:'Speed Racer (2008)', genres:'Action|Children|Comedy|Drama|Family|Sport', language:'English'},
+  {id:459, title:'Jupiter Ascending (2015)', genres:'Action|Adventure|Fantasy|Romance|Sci-Fi', language:'English'},
+  {id:460, title:'Cloud Atlas (2012)', genres:'Action|Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:461, title:'V for Vendetta (2005)', genres:'Action|Drama|Sci-Fi|Thriller', language:'English'},
+  {id:462, title:'Watchmen (2009)', genres:'Action|Drama|Mystery|Sci-Fi|Thriller', language:'English'},
+  {id:463, title:'The Fountain (2006)', genres:'Drama|Mystery|Romance|Sci-Fi', language:'English'},
+];
+
+/**
+ * Detect mood from text using weighted keyword scoring.
+ * Returns { mood, confidence, recommended_genres, message }
+ */
+function detectMoodLocally(text) {
+  const lower = text.toLowerCase().replace(/[^a-z\s']/g, ' ');
+  const words  = lower.split(/\s+/).filter(Boolean);
+
+  // Score each mood by how many of its keywords appear in the text
+  const scores = {};
+  for (const [mood, config] of Object.entries(MOOD_KEYWORDS)) {
+    let score = 0;
+    for (const word of words) {
+      // Exact match gets full point; partial match (stem) gets half
+      if (config.words.includes(word)) {
+        score += 1.0;
+      } else if (config.words.some(kw => kw.length > 4 && word.startsWith(kw.slice(0, 4)))) {
+        score += 0.5;
+      }
+    }
+    scores[mood] = score;
+  }
+
+  // Find highest scoring mood
+  const total    = Object.values(scores).reduce((a, b) => a + b, 0);
+  const bestMood = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  const mood     = bestMood[1] > 0 ? bestMood[0] : 'bored'; // default if no keywords matched
+  const conf     = total > 0 ? Math.round((bestMood[1] / total) * 100) : 50;
+
+  return {
+    mood,
+    confidence:          Math.max(conf, 45), // show at least 45% confidence
+    recommended_genres:  MOOD_KEYWORDS[mood].genres,
+    message:             MOOD_KEYWORDS[mood].message,
+  };
+}
+
+/**
+ * Filter and score movies based on detected mood genres.
+ * Returns movies sorted by genre relevance + a small random shuffle
+ * so results vary each time.
+ */
+function getMoviesForMood(mood, genreFilter, languageFilter, top_n = 10) {
+  const moodGenres = MOOD_KEYWORDS[mood]?.genres || [];
+
+  const scored = ALL_DEMO_MOVIES.map(movie => {
+    const movieGenres = movie.genres.split('|');
+    let score = 0;
+
+    // Score: +1 for each mood genre this movie has
+    moodGenres.forEach((mg, priority) => {
+      if (movieGenres.includes(mg)) {
+        // Higher priority genres (earlier in array) score more
+        score += (moodGenres.length - priority);
+      }
+    });
+
+    // Small random noise so order varies each call
+    score += Math.random() * 0.4;
+
+    return { ...movie, score: parseFloat(score.toFixed(2)) };
+  });
+
+  let filtered = scored.filter(m => m.score > 0);
+
+  // Apply manual genre filter if set
+  if (genreFilter) {
+    const gf = filtered.filter(m => m.genres.includes(genreFilter));
+    if (gf.length >= 3) filtered = gf;
+  }
+
+  // Apply language filter if set
+  if (languageFilter) {
+    const lf = filtered.filter(m => m.language === languageFilter);
+    if (lf.length >= 3) filtered = lf;
+  }
+
+  // If still empty (no match), return all movies shuffled
+  if (!filtered.length) {
+    filtered = scored;
+  }
+
+  return filtered
+    .sort((a, b) => b.score - a.score)
+    .slice(0, top_n);
+}
+
+/**
+ * Simple client-side sentiment analysis using keyword scoring.
+ * Returns { sentiment, confidence, emoji, probabilities }
+ */
+function analyzeSentimentLocally(text) {
+  const lower = text.toLowerCase();
+
+  const posWords = ['great','amazing','love','loved','fantastic','excellent','brilliant',
+                    'wonderful','perfect','outstanding','superb','incredible','best',
+                    'beautiful','enjoyed','enjoy','good','nice','awesome','impressed',
+                    'recommend','must watch','masterpiece','touching','moving','funny'];
+  const negWords = ['terrible','awful','bad','worst','boring','waste','horrible','poor',
+                    'disappointing','disappointed','dull','trash','rubbish','stupid',
+                    'hated','hate','avoid','skip','painful','unwatchable','pathetic',
+                    'ridiculous','nonsense','mess','failed','failure','weak','forgettable'];
+  const negation = ['not','never','no','don\'t','doesn\'t','didn\'t','wasn\'t','isn\'t'];
+
+  const words = lower.split(/\s+/);
+  let pos = 0, neg = 0;
+  let prevWasNegation = false;
+
+  words.forEach(word => {
+    const clean = word.replace(/[^a-z']/g, '');
+    if (negation.includes(clean)) { prevWasNegation = true; return; }
+
+    if (posWords.includes(clean)) {
+      prevWasNegation ? neg++ : pos++;
+    } else if (negWords.includes(clean)) {
+      prevWasNegation ? pos++ : neg++;
+    }
+    prevWasNegation = false;
+  });
+
+  const total = pos + neg || 1;
+  const posP  = Math.round((pos / total) * 100);
+  const negP  = Math.round((neg / total) * 100);
+  const neuP  = Math.max(0, 100 - posP - negP);
+
+  let sentiment, emoji;
+  if (pos === 0 && neg === 0) { sentiment = 'neutral'; emoji = '😐'; }
+  else if (pos > neg)         { sentiment = 'positive'; emoji = '😊'; }
+  else if (neg > pos)         { sentiment = 'negative'; emoji = '😞'; }
+  else                        { sentiment = 'neutral';  emoji = '😐'; }
+
+  return {
+    sentiment,
+    emoji,
+    confidence: Math.max(pos, neg, 1) / total * 100,
+    probabilities: { positive: posP, neutral: neuP, negative: negP }
+  };
+}
+
+function getDemoData(endpoint, requestBody) {
+  // Parse body if it's a string
+  let body = {};
+  try { body = typeof requestBody === 'string' ? JSON.parse(requestBody) : (requestBody || {}); }
+  catch {}
+
+  if (endpoint.includes('detect_mood')) {
+    const text   = body.text || '';
+    const result = detectMoodLocally(text);
+    return result;
+  }
 
   if (endpoint.includes('recommend')) {
-    return { recommendations: demoMovies.slice(0,8), detected_mood: 'excited', total: 8, algorithm: 'hybrid' };
+    const mood   = body.mood_text ? detectMoodLocally(body.mood_text).mood : 'bored';
+    const movies = getMoviesForMood(mood, body.genre, body.language, body.top_n || 10);
+    return { recommendations: movies, detected_mood: mood, total: movies.length, algorithm: 'demo-local' };
   }
+
   if (endpoint.includes('movies')) {
-    return { movies: demoMovies, total: demoMovies.length };
+    return { movies: ALL_DEMO_MOVIES, total: ALL_DEMO_MOVIES.length };
   }
+
   if (endpoint.includes('history')) {
     return { history: [], total: 0 };
   }
+
   if (endpoint.includes('predict_rating')) {
-    return { predicted_rating: (3 + Math.random()*2).toFixed(1), movie_title: 'Sample Movie' };
+    return { predicted_rating: (3 + Math.random() * 2).toFixed(1), movie_title: 'Sample Movie' };
   }
+
   if (endpoint.includes('analyze_review')) {
-    return { sentiment: 'positive', confidence: 82.3, emoji: '😊', probabilities: { negative:10, neutral:7.7, positive:82.3 } };
+    const text   = body.review_text || '';
+    const result = analyzeSentimentLocally(text);
+    return result;
   }
+
   return {};
 }
 
@@ -1121,9 +1831,11 @@ async function detectMood() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     });
+    if (!res.ok) throw new Error();
     data = await res.json();
   } catch {
-    data = { mood: 'excited', confidence: 75, recommended_genres: ['Action','Thriller'], message: 'Demo mood detection' };
+    // Flask offline — run mood detection locally in the browser
+    data = detectMoodLocally(text);
   }
 
   document.getElementById('mood-spinner').style.display = 'none';
@@ -1367,10 +2079,22 @@ function liveAnalyze(text) {
 }
 
 async function runSentimentAnalysis(text) {
-  const data = await apiFetch('/analyze_review', {
-    method: 'POST',
-    body: JSON.stringify({ review_text: text })
-  });
+  let data;
+  try {
+    const res = await fetch(`${API}/analyze_review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({ review_text: text })
+    });
+    if (!res.ok) throw new Error();
+    data = await res.json();
+  } catch {
+    // Flask offline — run locally
+    data = analyzeSentimentLocally(text);
+  }
 
   if (!data.sentiment) return;
 
@@ -1383,7 +2107,6 @@ async function runSentimentAnalysis(text) {
   label.className    = `sentiment-label ${data.sentiment}`;
   document.getElementById('sent-conf').textContent = (data.confidence || 0).toFixed(0) + '%';
 
-  // Update bars
   const p = data.probabilities || {};
   document.getElementById('bar-neg').style.width = (p.negative || 33) + '%';
   document.getElementById('bar-neu').style.width = (p.neutral  || 33) + '%';
@@ -1458,6 +2181,155 @@ function logout() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.getElementById('review-modal').classList.remove('open');
 });
+
+// ════════════════════════════════════════════════════════
+// SEARCHABLE MOVIE PICKER (sidebar)
+// ════════════════════════════════════════════════════════
+let selectedMovieTitle = '';
+let suggestionsVisible = false;
+
+function filterMovieSuggestions(query) {
+  const box = document.getElementById('movie-suggestions');
+  selectedMovieTitle = '';
+  document.getElementById('filter-movie').value = '';
+
+  if (!query || query.length < 2) { box.style.display = 'none'; return; }
+
+  const q = query.toLowerCase();
+  const matches = ALL_DEMO_MOVIES.filter(m => m.title.toLowerCase().includes(q)).slice(0, 12);
+
+  if (!matches.length) { box.style.display = 'none'; return; }
+
+  box.innerHTML = matches.map(m => `
+    <div onclick="selectMovie(${m.id}, '${m.title.replace(/'/g,"\\'")}', '${m.genres.split('|')[0]}')"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);
+             font-family:var(--ff-body);font-size:14px;color:var(--text);
+             transition:background 0.15s"
+      onmouseenter="this.style.background='rgba(201,168,76,0.08)'"
+      onmouseleave="this.style.background='transparent'">
+      <div style="font-weight:600">${m.title}</div>
+      <div style="font-family:var(--ff-mono);font-size:9px;color:var(--muted);
+                  letter-spacing:1px;margin-top:2px;text-transform:uppercase">
+        ${m.genres.split('|').slice(0,3).join(' · ')}
+      </div>
+    </div>
+  `).join('');
+
+  box.style.display = 'block';
+}
+
+function selectMovie(id, title, genre) {
+  selectedMovieTitle = title;
+  document.getElementById('filter-movie').value = title;
+  document.getElementById('movie-search-input').value = title;
+  document.getElementById('movie-suggestions').style.display = 'none';
+}
+
+function showSuggestions() {
+  const q = document.getElementById('movie-search-input').value;
+  if (q && q.length >= 2) filterMovieSuggestions(q);
+}
+
+// Close suggestions on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('#movie-search-input') && !e.target.closest('#movie-suggestions')) {
+    document.getElementById('movie-suggestions').style.display = 'none';
+  }
+});
+
+// ════════════════════════════════════════════════════════
+// ALL FILMS — FILTER + PAGINATION
+// ════════════════════════════════════════════════════════
+const PAGE_SIZE = 20;
+let currentPage = 1;
+let filteredMovies = [];
+
+function filterAllMovies() {
+  const query  = (document.getElementById('all-search')?.value || '').toLowerCase();
+  const genre  = document.getElementById('all-genre-filter')?.value || '';
+  const lang   = document.getElementById('all-lang-filter')?.value  || '';
+
+  filteredMovies = ALL_DEMO_MOVIES.filter(m => {
+    const matchQ = !query || m.title.toLowerCase().includes(query);
+    const matchG = !genre || m.genres.includes(genre);
+    const matchL = !lang  || m.language === lang;
+    return matchQ && matchG && matchL;
+  });
+
+  currentPage = 1;
+  renderPage();
+  renderPagination();
+  document.getElementById('all-count').textContent =
+    filteredMovies.length + ' film' + (filteredMovies.length !== 1 ? 's' : '');
+}
+
+function renderPage() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const slice = filteredMovies.slice(start, start + PAGE_SIZE);
+  renderMovieGrid('all-grid', slice, null);
+  // Re-apply saved ratings to newly rendered cards
+  Object.entries(state.userRatings).forEach(([movieId, rating]) => {
+    const row = document.getElementById(`stars-${movieId}`);
+    if (!row) return;
+    row.dataset.rating = rating;
+    row.querySelectorAll('.star').forEach((s, i) => s.classList.toggle('rated', i < rating));
+    const label = document.getElementById(`rate-label-${movieId}`);
+    if (label) { label.textContent = `${rating}/5`; label.className = 'rate-label rated-text'; }
+  });
+}
+
+function renderPagination() {
+  const total = Math.ceil(filteredMovies.length / PAGE_SIZE);
+  const el    = document.getElementById('all-pagination');
+  if (!el) return;
+  if (total <= 1) { el.innerHTML = ''; return; }
+
+  let html = '';
+  // Prev button
+  html += `<button onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''} style="
+    padding:8px 14px;background:transparent;border:1px solid var(--border);
+    color:${currentPage===1?'var(--dim)':'var(--muted)'};font-family:var(--ff-mono);
+    font-size:10px;letter-spacing:2px;cursor:${currentPage===1?'not-allowed':'pointer'};
+    transition:all 0.2s">← PREV</button>`;
+
+  // Page numbers (show max 7)
+  const pages = [];
+  for (let p = 1; p <= total; p++) {
+    if (p === 1 || p === total || Math.abs(p - currentPage) <= 2) pages.push(p);
+    else if (pages[pages.length-1] !== '…') pages.push('…');
+  }
+  pages.forEach(p => {
+    if (p === '…') {
+      html += `<span style="padding:8px 4px;color:var(--dim);font-family:var(--ff-mono);font-size:10px">…</span>`;
+    } else {
+      const active = p === currentPage;
+      html += `<button onclick="goPage(${p})" style="
+        padding:8px 12px;border:1px solid ${active?'var(--gold-dim)':'var(--border)'};
+        background:${active?'rgba(201,168,76,0.1)':'transparent'};
+        color:${active?'var(--gold)':'var(--muted)'};font-family:var(--ff-mono);
+        font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.2s">${p}</button>`;
+    }
+  });
+
+  // Next button
+  html += `<button onclick="goPage(${currentPage+1})" ${currentPage===total?'disabled':''} style="
+    padding:8px 14px;background:transparent;border:1px solid var(--border);
+    color:${currentPage===total?'var(--dim)':'var(--muted)'};font-family:var(--ff-mono);
+    font-size:10px;letter-spacing:2px;cursor:${currentPage===total?'not-allowed':'pointer'};
+    transition:all 0.2s">NEXT →</button>`;
+
+  el.innerHTML = html;
+  el.style.display = 'flex';
+}
+
+function goPage(p) {
+  const total = Math.ceil(filteredMovies.length / PAGE_SIZE);
+  if (p < 1 || p > total) return;
+  currentPage = p;
+  renderPage();
+  renderPagination();
+  document.getElementById('all-movies-section').scrollIntoView({ behavior:'smooth', block:'start' });
+}
 </script>
 </body>
 </html>
