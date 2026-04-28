@@ -70,3 +70,5 @@ node_modules/
 
 firebase/functions/serviceAccountKey.json
 .env
+
+serviceAccountKey.json
