@@ -24,6 +24,10 @@ pymysql>=1.1.0
 # Auth
 bcrypt>=4.0.0
 
+# Firebase / Firestore
+firebase-admin>=6.0.0
+google-cloud-firestore>=2.11.0
+
 # Utilities
 python-dotenv>=1.0.0
 gunicorn>=21.0.0          # Production WSGI server

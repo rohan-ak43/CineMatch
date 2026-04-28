@@ -6,10 +6,12 @@
 #   2. Exposes REST API endpoints for the frontend
 #   3. Handles user authentication with JWT tokens
 #   4. Connects to MySQL for persistent storage
+#   5. Uses Firebase Authentication + Firestore for user management
 #
 # API Endpoints:
-#   POST  /api/auth/register     — Register new user
+#   POST  /api/auth/register     — Register new user (Email/Password)
 #   POST  /api/auth/login        — Login, returns JWT token
+#   POST  /api/auth/firebase     — Verify Firebase ID token (Google / Email), returns JWT
 #   POST  /api/recommend         — Get movie recommendations
 #   POST  /api/predict_rating    — Predict rating for a movie
 #   POST  /api/analyze_review    — Analyze review sentiment
@@ -30,7 +32,7 @@ import pandas as pd
 import joblib
 from datetime import datetime, timedelta
 import firebase_admin
-from firebase_admin import credentials
+from firebase_admin import credentials, auth as firebase_auth, firestore
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -40,13 +42,29 @@ from flask_jwt_extended import (
 )
 import bcrypt
 
-cred = credentials.Certificate("firebase/functions/serviceAccountKey.json")
+# Initialize Firebase Admin SDK with service account
+_SERVICE_ACCOUNT_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    'firebase', 'functions', 'serviceAccountKey.json'
+)
+cred = credentials.Certificate(_SERVICE_ACCOUNT_PATH)
 firebase_admin.initialize_app(cred)
+
+# Firestore client (used throughout the app)
+db = firestore.client()
+
 # =============================================================================
 # APP INITIALIZATION
 # =============================================================================
 
-app = Flask(__name__)
+# Resolve the frontend directory relative to this file
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
+
+app = Flask(
+    __name__,
+    static_folder=FRONTEND_DIR,   # serve /frontend as static files
+    static_url_path='',           # root URL maps to frontend folder
+)
 CORS(app, origins=["http://localhost:5000", "http://127.0.0.1:5000",
                     "http://localhost:3000", "*"])
 
@@ -251,6 +269,23 @@ def get_ratings_df():
     return pd.DataFrame()
 
 # =============================================================================
+# ROUTE: SERVE FRONTEND (makes Firebase Auth work — requires http://)
+# =============================================================================
+
+from flask import send_from_directory
+
+@app.route('/')
+def serve_index():
+    """Serve the main login page."""
+    return send_from_directory(FRONTEND_DIR, 'index.html')
+
+@app.route('/pages/<path:filename>')
+def serve_pages(filename):
+    """Serve files from the /frontend/pages/ directory."""
+    pages_dir = os.path.join(FRONTEND_DIR, 'pages')
+    return send_from_directory(pages_dir, filename)
+
+# =============================================================================
 # ROUTE: HEALTH CHECK
 # =============================================================================
 
@@ -264,6 +299,7 @@ def health_check():
         'version': '1.0.0'
     })
 
+
 # =============================================================================
 # ROUTE: USER REGISTRATION
 # =============================================================================
@@ -271,8 +307,9 @@ def health_check():
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     """
-    Register a new user.
+    Register a new user via Email/Password.
     Request body: { name, email, password }
+    User profile is saved to Firestore 'users' collection.
     """
     data = request.get_json()
     if not data:
@@ -292,6 +329,8 @@ def register():
 
     # Hash password with bcrypt
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    user_id = None
 
     # Try MySQL first
     conn = get_db_connection()
@@ -322,6 +361,20 @@ def register():
             'password': hashed_password, 'created_at': datetime.now().isoformat()
         }
         memory_db['next_user_id'] += 1
+
+    # Sync user profile to Firestore
+    try:
+        user_doc_ref = db.collection('users').document(str(user_id))
+        user_doc_ref.set({
+            'user_id': user_id,
+            'name': name,
+            'email': email,
+            'provider': 'email_password',
+            'created_at': datetime.now().isoformat(),
+            'last_login': datetime.now().isoformat(),
+        }, merge=True)
+    except Exception as fs_err:
+        app.logger.warning(f"Firestore sync failed for user {user_id}: {fs_err}")
 
     # Generate JWT token
     token = create_access_token(identity=str(user_id))
@@ -379,6 +432,14 @@ def login():
     user_id = user['user_id']
     token = create_access_token(identity=str(user_id))
 
+    # Update last_login in Firestore
+    try:
+        db.collection('users').document(str(user_id)).set(
+            {'last_login': datetime.now().isoformat()}, merge=True
+        )
+    except Exception as fs_err:
+        app.logger.warning(f"Firestore last_login update failed: {fs_err}")
+
     return jsonify({
         'message': 'Login successful!',
         'user': {
@@ -389,37 +450,117 @@ def login():
         'token': token
     })
 
+
+# =============================================================================
+# ROUTE: FIREBASE AUTH (Email/Password + Google Sign-In via client SDK)
+# =============================================================================
+
+@app.route('/api/auth/firebase', methods=['POST'])
+def firebase_login():
+    """
+    Verify a Firebase ID token issued by the client (Email/Password or Google).
+    The client calls Firebase SDK first, then sends the resulting ID token here.
+    This endpoint:
+      1. Verifies the token with Firebase Admin SDK
+      2. Upserts the user record in Firestore 'users' collection
+      3. Returns a JWT for all subsequent @jwt_required() API calls
+
+    Request body: { id_token: "<firebase_id_token>" }
+    """
+    data = request.get_json()
+    if not data or not data.get('id_token'):
+        return jsonify({'error': 'Firebase ID token is required'}), 400
+
+    id_token = data['id_token']
+
+    # 1. Verify the Firebase ID token
+    try:
+        decoded_token = firebase_auth.verify_id_token(id_token)
+    except firebase_auth.ExpiredIdTokenError:
+        return jsonify({'error': 'Firebase token has expired. Please sign in again.'}), 401
+    except firebase_auth.InvalidIdTokenError:
+        return jsonify({'error': 'Invalid Firebase token.'}), 401
+    except Exception as e:
+        app.logger.error(f"Firebase token verification error: {e}")
+        return jsonify({'error': 'Token verification failed.'}), 401
+
+    firebase_uid = decoded_token['uid']
+    email = decoded_token.get('email', '')
+    name = decoded_token.get('name', email.split('@')[0] if email else 'User')
+    picture = decoded_token.get('picture', None)
+    provider = decoded_token.get('firebase', {}).get('sign_in_provider', 'unknown')
+
+    # 2. Upsert user in Firestore 'users' collection (keyed by Firebase UID)
+    now = datetime.now().isoformat()
+    user_doc_ref = db.collection('users').document(firebase_uid)
+    user_doc = user_doc_ref.get()
+
+    if user_doc.exists:
+        # Existing user — update last login
+        user_doc_ref.update({
+            'last_login': now,
+            'name': name,
+            'picture': picture,
+        })
+        user_data = user_doc.to_dict()
+        is_new_user = False
+    else:
+        # New user — create full profile
+        user_data = {
+            'firebase_uid': firebase_uid,
+            'name': name,
+            'email': email,
+            'picture': picture,
+            'provider': provider,
+            'created_at': now,
+            'last_login': now,
+            'ratings_count': 0,
+            'reviews_count': 0,
+        }
+        user_doc_ref.set(user_data)
+        is_new_user = True
+
+    # Generate and store initial recommendations
+    try:
+        recs, _, _ = generate_recommendations(top_n=10)
+        if isinstance(recs, list):
+            user_doc_ref.set({'recommendations': recs}, merge=True)
+    except Exception as e:
+        app.logger.error(f"Failed to generate/store initial recommendations: {e}")
+
+    # 3. Issue a JWT using the Firebase UID as identity
+    jwt_token = create_access_token(identity=firebase_uid)
+
+    return jsonify({
+        'message': 'Welcome back!' if not is_new_user else 'Account created!',
+        'user': {
+            'id': firebase_uid,
+            'name': name,
+            'email': email,
+            'picture': picture,
+        },
+        'token': jwt_token,
+        'is_new_user': is_new_user,
+    })
+
 # =============================================================================
 # ROUTE: RECOMMENDATIONS
 # =============================================================================
 
-@app.route('/api/recommend', methods=['POST'])
-@jwt_required()
-def recommend():
-    """
-    Get personalized movie recommendations.
-    Request body: {
-        mood_text: "I feel excited and want action",
-        liked_movie: "Heat (1995)",           (optional)
-        genre: "Action",                       (optional)
-        language: "English",                   (optional)
-        top_n: 10
-    }
-    """
-    user_id = int(get_jwt_identity())
-    data = request.get_json() or {}
+def get_int_user_id(identity):
+    """Safely convert a JWT identity (which might be a Firebase string UID) to an int."""
+    try:
+        return int(identity)
+    except (ValueError, TypeError):
+        return 0
 
-    mood_text = data.get('mood_text', '')
-    liked_movie = data.get('liked_movie', '')
-    preferred_genre = data.get('genre', '')
-    preferred_language = data.get('language', '')
-    top_n = min(int(data.get('top_n', 10)), 20)
-
+def generate_recommendations(mood_text='', liked_movie='', preferred_genre='', preferred_language='', top_n=10):
+    """Core recommendation logic extracted from /api/recommend."""
     movies_df = get_movies_df()
     ratings_df = get_ratings_df()
 
     if movies_df.empty:
-        return jsonify({'error': 'Movie database not loaded. Run train_all.py first.'}), 500
+        return {'error': 'Movie database not loaded.'}, None, None
 
     # --- Step 1: Detect mood ---
     detected_mood = None
@@ -479,6 +620,7 @@ def recommend():
             'genres': str(row.get('genres', '')),
             'language': str(row.get('language', 'English')),
             'score': float(score),
+            'poster_url': row.get('poster_url', None)
         })
 
     results_df = pd.DataFrame(results)
@@ -509,6 +651,41 @@ def recommend():
 
     # Sort and return top N
     top_results = results_df.sort_values('score', ascending=False).head(top_n)
+    
+    if 'poster_url' in top_results.columns:
+        top_results['poster_url'] = top_results['poster_url'].fillna('')
+        
+    return top_results.to_dict(orient='records'), detected_mood, mood_genres
+
+@app.route('/api/recommend', methods=['POST'])
+@jwt_required()
+def recommend():
+    """
+    Get personalized movie recommendations.
+    Request body: {
+        mood_text: "I feel excited and want action",
+        liked_movie: "Heat (1995)",           (optional)
+        genre: "Action",                       (optional)
+        language: "English",                   (optional)
+        top_n: 10
+    }
+    """
+    identity = get_jwt_identity()
+    user_id = get_int_user_id(identity)
+    data = request.get_json() or {}
+
+    mood_text = data.get('mood_text', '')
+    liked_movie = data.get('liked_movie', '')
+    preferred_genre = data.get('genre', '')
+    preferred_language = data.get('language', '')
+    top_n = min(int(data.get('top_n', 10)), 20)
+
+    recs, detected_mood, mood_genres = generate_recommendations(
+        mood_text, liked_movie, preferred_genre, preferred_language, top_n
+    )
+
+    if isinstance(recs, dict) and 'error' in recs:
+        return jsonify(recs), 500
 
     # Log recommendation session
     rec_data = {
@@ -517,7 +694,7 @@ def recommend():
         'detected_mood': detected_mood,
         'genre_filter': preferred_genre,
         'language_filter': preferred_language,
-        'movies_returned': json.dumps(top_results['id'].tolist()),
+        'movies_returned': json.dumps([r['id'] for r in recs]),
         'algorithm_used': 'hybrid'
     }
     conn = get_db_connection()
@@ -536,10 +713,10 @@ def recommend():
             conn.close()
 
     return jsonify({
-        'recommendations': top_results.to_dict(orient='records'),
+        'recommendations': recs,
         'detected_mood': detected_mood,
         'mood_genres': mood_genres,
-        'total': len(top_results),
+        'total': len(recs),
         'algorithm': 'hybrid'
     })
 
@@ -554,7 +731,8 @@ def predict_rating():
     Predict what rating a user would give a specific movie.
     Request body: { movie_id: 6 }
     """
-    user_id = int(get_jwt_identity())
+    identity = get_jwt_identity()
+    user_id = get_int_user_id(identity)
     data = request.get_json() or {}
     movie_id = data.get('movie_id')
 
@@ -703,7 +881,8 @@ def submit_review():
     Submit a movie review. Automatically runs sentiment analysis.
     Request body: { movie_id, review_text }
     """
-    user_id = int(get_jwt_identity())
+    identity = get_jwt_identity()
+    user_id = get_int_user_id(identity)
     data = request.get_json() or {}
 
     movie_id = data.get('movie_id')
@@ -770,7 +949,8 @@ def rate_movie():
     Submit or update a movie rating.
     Request body: { movie_id, rating }
     """
-    user_id = int(get_jwt_identity())
+    identity = get_jwt_identity()
+    user_id = get_int_user_id(identity)
     data = request.get_json() or {}
 
     movie_id = data.get('movie_id')
@@ -825,7 +1005,8 @@ def rate_movie():
 @jwt_required()
 def get_history():
     """Get the authenticated user's watch history."""
-    user_id = int(get_jwt_identity())
+    identity = get_jwt_identity()
+    user_id = get_int_user_id(identity)
     limit = int(request.args.get('limit', 20))
 
     movies_df = get_movies_df()
