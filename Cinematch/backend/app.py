@@ -180,6 +180,19 @@ def load_models():
         'sentiment_map': 'sentiment_map.pkl',
     }
 
+    # Load HuggingFace Sentiment Pipeline
+    hf_config_path = os.path.join(MODELS_DIR, 'sentiment_hf_config.json')
+    if os.path.exists(hf_config_path):
+        try:
+            with open(hf_config_path) as f:
+                hf_config = json.load(f)
+            from transformers import pipeline
+            print(f"  ⏳ Loading Hugging Face pipeline ({hf_config['model_name']})...")
+            ml_models['sentiment_pipeline'] = pipeline("sentiment-analysis", model=hf_config['model_name'], tokenizer=hf_config['model_name'])
+            print(f"  ✅ Loaded: Hugging Face Sentiment Pipeline")
+        except Exception as e:
+            print(f"  ❌ Failed to load HF pipeline: {e}")
+
     for key, filename in model_files.items():
         path = os.path.join(MODELS_DIR, filename)
         if os.path.exists(path):
@@ -837,29 +850,35 @@ def analyze_review():
     if len(review_text) < 5:
         return jsonify({'error': 'Review is too short'}), 400
 
-    if 'sentiment_classifier' not in ml_models:
+    if 'sentiment_pipeline' in ml_models:
+        result = ml_models['sentiment_pipeline'](review_text)[0]
+        label = result['label'].lower()
+        if label == "positive" or label == "label_2":
+            predicted_sentiment = "positive"
+        elif label == "neutral" or label == "label_1":
+            predicted_sentiment = "neutral"
+        else:
+            predicted_sentiment = "negative"
+        confidence = float(result['score'] * 100)
+        prob_dict = {'negative': 0.0, 'neutral': 0.0, 'positive': 0.0}
+        prob_dict[predicted_sentiment] = confidence
+
+    elif 'sentiment_classifier' in ml_models:
+        clean_review = clean_text_for_ml(review_text)
+        review_vector = ml_models['sentiment_tfidf'].transform([clean_review])
+        predicted_class = int(ml_models['sentiment_classifier'].predict(review_vector)[0])
+        sentiment_data = ml_models.get('sentiment_map', {'decode': {0: 'negative', 1: 'neutral', 2: 'positive'}})
+        sentiment_decode = sentiment_data.get('decode', {0: 'negative', 1: 'neutral', 2: 'positive'})
+        predicted_sentiment = sentiment_decode.get(predicted_class, 'neutral')
+        probabilities = ml_models['sentiment_classifier'].predict_proba(review_vector)[0]
+        confidence = float(max(probabilities) * 100)
+        prob_dict = {
+            'negative': float(probabilities[0] * 100),
+            'neutral': float(probabilities[1] * 100),
+            'positive': float(probabilities[2] * 100)
+        }
+    else:
         return jsonify({'error': 'Sentiment model not loaded'}), 500
-
-    # Clean the text
-    clean_review = clean_text_for_ml(review_text)
-
-    # Vectorize
-    review_vector = ml_models['sentiment_tfidf'].transform([clean_review])
-
-    # Predict
-    predicted_class = int(ml_models['sentiment_classifier'].predict(review_vector)[0])
-    sentiment_data = ml_models.get('sentiment_map', {'decode': {0: 'negative', 1: 'neutral', 2: 'positive'}})
-    sentiment_decode = sentiment_data.get('decode', {0: 'negative', 1: 'neutral', 2: 'positive'})
-    predicted_sentiment = sentiment_decode.get(predicted_class, 'neutral')
-
-    # Get probabilities
-    probabilities = ml_models['sentiment_classifier'].predict_proba(review_vector)[0]
-    confidence = float(max(probabilities) * 100)
-    prob_dict = {
-        'negative': float(probabilities[0] * 100),
-        'neutral': float(probabilities[1] * 100),
-        'positive': float(probabilities[2] * 100)
-    }
 
     emoji_map = {'positive': '😊', 'neutral': '😐', 'negative': '😞'}
 
@@ -895,7 +914,17 @@ def submit_review():
     sentiment = 'neutral'
     confidence = 0.0
 
-    if 'sentiment_classifier' in ml_models:
+    if 'sentiment_pipeline' in ml_models:
+        result = ml_models['sentiment_pipeline'](review_text)[0]
+        label = result['label'].lower()
+        if label == "positive" or label == "label_2":
+            sentiment = "positive"
+        elif label == "neutral" or label == "label_1":
+            sentiment = "neutral"
+        else:
+            sentiment = "negative"
+        confidence = float(result['score'] * 100)
+    elif 'sentiment_classifier' in ml_models:
         clean_review = clean_text_for_ml(review_text)
         review_vector = ml_models['sentiment_tfidf'].transform([clean_review])
         predicted_class = int(ml_models['sentiment_classifier'].predict(review_vector)[0])

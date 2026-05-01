@@ -47,7 +47,7 @@ print("\n[STEP 1] Creating Mood Training Dataset...")
 
 mood_data = {
     'text': [
-        # HAPPY (label: 0)
+        # HAPPY
         "I feel great and joyful today", "Everything is wonderful and beautiful",
         "I'm so happy and excited about life", "Feeling cheerful and positive",
         "Life is amazing and I love everything", "I feel blessed and grateful",
@@ -56,8 +56,13 @@ mood_data = {
         "Everything is going perfectly for me", "I'm feeling wonderful and upbeat",
         "So much happiness and love today", "Feeling on top of the world",
         "I'm beaming with joy and optimism", "Life feels beautiful and bright",
+        "feeling good", "I'm in a great mood", "today was awesome", "couldn't be happier",
+        "I am so happy", "feeling fantastic", "pretty good", "doing well", "had a great day",
+        "I'm feeling very positive", "cheerful", "upbeat", "in high spirits", "feeling lucky",
+        "everything is going my way", "feeling joyful", "content with life", "smiles all around",
+        "feeling sunny", "great day", "feeling jolly", "jolly good time", "merry and bright", "gleeful",
 
-        # SAD (label: 1)
+        # SAD
         "I feel sad and lonely today", "Everything feels hopeless and gloomy",
         "I'm depressed and crying", "Feeling heartbroken and miserable",
         "Nothing seems to matter anymore", "I feel empty and lost inside",
@@ -66,8 +71,14 @@ mood_data = {
         "The world feels dark and sad", "I miss someone and feel lonely",
         "Feeling devastated and broken hearted", "So much pain and sadness",
         "I can't stop feeling sorry and sad", "Overwhelmed with grief and sorrow",
+        "feeling down", "I'm sad", "feeling miserable", "kind of depressed",
+        "I'm feeling gloomy", "crying right now", "feeling heartbroken", "upset",
+        "not having a good day", "feeling low", "sad and lonely", "feeling terrible",
+        "everything sucks", "I feel empty", "feeling blue", "in a bad mood",
+        "feeling sorrowful", "very unhappy", "so sad", "feeling awful",
+        "feeling downcast", "despondent", "weeping", "tearful",
 
-        # EXCITED (label: 2)
+        # EXCITED
         "I'm so pumped and thrilled today", "Can't wait for this adventure to start",
         "Feeling hyped and energetic right now", "So stoked and enthusiastic about everything",
         "I'm buzzing with excitement and energy", "This is so thrilling and amazing",
@@ -76,8 +87,14 @@ mood_data = {
         "I'm psyched and raring to go", "This feels exhilarating and intense",
         "Feeling totally wired and excited", "Can barely contain my excitement",
         "I feel alive and turbocharged", "Maximum energy and enthusiasm today",
+        "I'm pumped", "so excited", "thrilled", "can't wait", "hyped up",
+        "feeling energetic", "ready for action", "super excited", "stoked",
+        "feeling adventurous", "amped up", "really looking forward to it",
+        "feeling wild", "full of energy", "raring to go", "adrenaline is pumping",
+        "I'm eager", "exhilarated", "feeling electric", "buzzing",
+        "mind-blowing", "heart is racing", "super hyped", "exhilarating",
 
-        # BORED (label: 3)
+        # BORED
         "I'm bored and have nothing to do", "Everything feels dull and monotonous",
         "Feeling uninterested and zoned out", "Nothing excites me right now",
         "I'm restless and tired of routine", "Everything seems pointless and boring",
@@ -86,8 +103,14 @@ mood_data = {
         "I'm vegetating and wasting time", "Nothing captures my attention today",
         "Feeling lethargic and unengaged", "Same old boring day again",
         "I need something to entertain me", "Completely indifferent to everything",
+        "bored out of my mind", "nothing to do", "feeling meh", "boredom",
+        "yawn", "so bored", "uninterested", "nothing is happening",
+        "need entertainment", "wish I had something to do", "feeling dull",
+        "tired of waiting", "staring at the wall", "bored silly", "I'm just bored",
+        "not much going on", "bland day", "feeling uninspired", "need a distraction", "killing time",
+        "monotonous", "tedious", "nothing to do here", "yawning",
 
-        # STRESSED (label: 4)
+        # STRESSED
         "I feel so stressed and overwhelmed", "Everything is too much to handle",
         "I'm anxious and worried about everything", "Pressure is crushing me right now",
         "I feel burned out and exhausted", "Too much work and not enough time",
@@ -96,13 +119,19 @@ mood_data = {
         "So much anxiety and stress today", "I feel frantic and overwhelmed",
         "Can't relax because I'm too stressed", "Nervous and on edge about everything",
         "I'm tightly wound and stressed out", "Feeling frazzled and burnt out",
+        "feeling stressed out", "too much pressure", "anxious", "worried",
+        "feeling overwhelmed", "I'm tense", "freaking out", "so much to do",
+        "stressed", "feeling panicked", "can't relax", "mind is racing",
+        "feeling nervous", "under a lot of stress", "having a panic attack",
+        "losing my mind", "feeling strained", "exhausted from stress", "feeling jittery", "stressed and tired",
+        "panic", "sweating", "overworked", "can't breathe",
     ],
     'mood': (
-        ['happy'] * 16 +
-        ['sad'] * 16 +
-        ['excited'] * 16 +
-        ['bored'] * 16 +
-        ['stressed'] * 16
+        ['happy'] * 40 +
+        ['sad'] * 40 +
+        ['excited'] * 40 +
+        ['bored'] * 40 +
+        ['stressed'] * 40
     )
 }
 
