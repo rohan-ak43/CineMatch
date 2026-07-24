@@ -17,7 +17,7 @@ cinematch/
 │   ├── 02_collaborative_filtering.py    ← KNN User/Item Based
 │   ├── 03_mood_classifier.py            ← NLP Mood Detection
 │   ├── 04_rating_predictor.py           ← Random Forest Regressor
-│   ├── 05_sentiment_analysis.py         ← Logistic Regression Sentiment
+│   ├── 05_sentiment_analysis.py         ← Hugging Face Transformer
 │   └── 06_hybrid_recommender.py         ← Combined System + Visuals
 │
 ├── backend/
@@ -45,19 +45,13 @@ cinematch/
 pip install -r requirements.txt
 ```
 
-### Step 2 — Set up MySQL (optional, app works without it)
-
-```bash
-# Start MySQL and run the schema file
-mysql -u root -p < backend/schema.sql
-```
-
-### Step 3 — Configure environment
+### Step 2 — Configure Environment (Firebase & Database)
 
 ```bash
 cp .env.example .env
-# Edit .env with your MySQL credentials and secret keys
+# Edit .env to add your Firebase Admin credentials path and MySQL database keys
 ```
+*Note: User Authentication and Profiles are now fully managed by Google Firebase/Firestore. A local MySQL database is optional for historical data.*
 
 ### Step 4 — Train all ML models
 
@@ -75,13 +69,15 @@ python app.py
 # Server starts at http://localhost:5000
 ```
 
-### Step 6 — Open the frontend
+### Step 6 — Start the Frontend Server
+
+Because Firebase Authentication requires an HTTP environment (no `file:///`), you must run a local server:
 
 ```bash
-# Simply open in your browser:
-open frontend/index.html
-# Or drag frontend/index.html into any browser
+cd frontend
+python -m http.server 8000
 ```
+Open your browser and navigate to `http://localhost:8000`
 
 ---
 
@@ -93,7 +89,7 @@ open frontend/index.html
 | Collaborative Filtering | KNN (cosine distance) | User-based recs | RMSE |
 | Mood Classifier | Logistic Regression | 5-class NLP | Accuracy |
 | Rating Predictor | Random Forest Regressor | Rating prediction | RMSE, MAE |
-| Sentiment Analyzer | Logistic Regression | 3-class review sentiment | Accuracy |
+| Sentiment Analyzer | Hugging Face Transformer | 3-class review sentiment | Accuracy |
 | Hybrid Recommender | Weighted combination | Final ranking | Precision@K |
 
 ---
@@ -160,11 +156,11 @@ export JWT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))"
 1. **TF-IDF Vectorization** — Converts text to numerical features
 2. **Cosine Similarity** — Measures distance between movie vectors
 3. **K-Nearest Neighbors** — Finds similar users/items
-4. **Logistic Regression** — Text classification with probability scores
+4. **Hugging Face Transformers** — Deep Learning for context-aware Sentiment Analysis
 5. **Random Forest** — Ensemble method for rating prediction
 6. **Hybrid Filtering** — Weighted combination of multiple signals
 7. **Cold Start Handling** — Popularity-based fallback for new users
-8. **Sentiment Analysis** — Classifies review polarity
+8. **Serverless NoSQL (Firestore)** — Cloud-native user profile management
 9. **Bayesian Average** — Fairer movie ranking than raw averages
 
 
