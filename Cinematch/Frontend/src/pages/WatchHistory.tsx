@@ -1,0 +1,1 @@
+export const WatchHistory = () => <div>WatchHistory</div>;

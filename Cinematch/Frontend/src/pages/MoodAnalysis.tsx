@@ -1,0 +1,1 @@
+export const MoodAnalysis = () => <div>MoodAnalysis</div>;

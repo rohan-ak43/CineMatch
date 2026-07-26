@@ -1,0 +1,1 @@
+export const Shimmer = ({ className }: any) => <div className={className}>Loading...</div>;
