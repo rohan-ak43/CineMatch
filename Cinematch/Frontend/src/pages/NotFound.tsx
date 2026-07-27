@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Film } from 'lucide-react';
+import { Home, Film, Clapperboard } from 'lucide-react';
 
 export function NotFound() {
   return (
@@ -11,7 +11,7 @@ export function NotFound() {
         transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         className="mb-8 text-[120px] leading-none select-none"
       >
-        🎬
+        <Clapperboard className="mx-auto h-32 w-32 text-void-700" />
       </motion.div>
 
       <motion.div

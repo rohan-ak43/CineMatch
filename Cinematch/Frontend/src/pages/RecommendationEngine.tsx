@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Star, ChevronRight, RefreshCw } from 'lucide-react';
+import { Sparkles, Star, ChevronRight, RefreshCw, Film, Disc, Clapperboard, Globe, Zap, Target, Moon, User, Heart, Users, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { movies } from '../data/mockData';
 import { MovieCard } from '../components/movie/MovieCard';
@@ -11,30 +11,30 @@ const questions = [
     id: 'era',
     question: 'Preferred era?',
     options: [
-      { value: 'classic', label: 'Classic (Pre-2000)', emoji: '📼' },
-      { value: 'modern', label: 'Modern (2000s)', emoji: '📀' },
-      { value: 'recent', label: 'Recent (2015+)', emoji: '🎬' },
-      { value: 'any', label: 'Any era', emoji: '🌐' },
+      { value: 'classic', label: 'Classic (Pre-2000)', icon: Film },
+      { value: 'modern', label: 'Modern (2000s)', icon: Disc },
+      { value: 'recent', label: 'Recent (2015+)', icon: Clapperboard },
+      { value: 'any', label: 'Any era', icon: Globe },
     ],
   },
   {
     id: 'length',
     question: 'How long is your evening?',
     options: [
-      { value: 'short', label: 'Quick (<90 min)', emoji: '⚡' },
-      { value: 'medium', label: 'Standard (90–120 min)', emoji: '🎯' },
-      { value: 'long', label: 'Epic (120+ min)', emoji: '🌙' },
-      { value: 'any', label: 'Doesn\'t matter', emoji: '✨' },
+      { value: 'short', label: 'Quick (<90 min)', icon: Zap },
+      { value: 'medium', label: 'Standard (90–120 min)', icon: Target },
+      { value: 'long', label: 'Epic (120+ min)', icon: Moon },
+      { value: 'any', label: 'Doesn\'t matter', icon: Sparkles },
     ],
   },
   {
     id: 'company',
     question: 'Who\'s watching with you?',
     options: [
-      { value: 'solo', label: 'Just me', emoji: '🧍' },
-      { value: 'partner', label: 'Date night', emoji: '👫' },
-      { value: 'friends', label: 'Friends', emoji: '👥' },
-      { value: 'family', label: 'Family', emoji: '👨‍👩‍👧' },
+      { value: 'solo', label: 'Just me', icon: User },
+      { value: 'partner', label: 'Date night', icon: Heart },
+      { value: 'friends', label: 'Friends', icon: Users },
+      { value: 'family', label: 'Family', icon: Home },
     ],
   },
 ];
@@ -121,7 +121,7 @@ export function RecommendationEngine() {
                   onClick={() => handleAnswer(opt.value)}
                   className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-void-800/60 p-6 text-center hover:border-ember-500/40 hover:bg-ember-500/5 transition-all"
                 >
-                  <span className="text-3xl">{opt.emoji}</span>
+                  <opt.icon className="h-8 w-8 mb-2" />
                   <span className="text-sm font-semibold text-mist-100">{opt.label}</span>
                 </motion.button>
               ))}
