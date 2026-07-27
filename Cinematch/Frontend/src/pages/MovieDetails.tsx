@@ -11,6 +11,7 @@ import { formatRuntime, cn } from '../lib/utils';
 import { ErrorState } from '../components/ui/States';
 import { Shimmer } from '../components/ui/LoadingSkeleton';
 import { Reviews } from '../components/Reviews';
+import type { Movie } from '../data/mockData';
 
 export function MovieDetails() {
     const { id } = useParams<{ id: string }>();
@@ -20,10 +21,9 @@ export function MovieDetails() {
         enabled: !!id,
     });
 
-    const isFavorite = useAppStore((s) => (movie ? s.isFavorite(movie.id) : false));
-    const toggleFavorite = useAppStore((s) => s.toggleFavorite);
-    const addHistory = useAppStore((s) => s.addHistory);
-    const history = useAppStore((s) => s.history);
+    const store = useAppStore();
+    const isFav = movie ? store.isFavorite(movie.id) : false;
+    const { toggleFavorite, addHistory, history } = store;
 
     if (isLoading) {
         return (
@@ -82,15 +82,15 @@ export function MovieDetails() {
                         <div className="mt-6 flex flex-wrap gap-3">
                             <button
                                 onClick={() => toast('Trailer would open here — hook up a real source to play it.', 'info')}
-                                className="flex items-center gap-2 rounded-full bg-ember-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-ember-500/25"
+                                className="flex items-center gap-2 rounded-full bg-ember-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-ember-500/25 btn-glow"
                             >
                                 <Play className="h-4 w-4" fill="currentColor" /> Watch trailer
                             </button>
                             <button
-                                onClick={() => { toggleFavorite(movie); toast(isFavorite ? `Removed ${movie.title} from favorites` : `Added ${movie.title} to favorites`); }}
-                                className={cn('flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold ring-1 ring-white/10', isFavorite ? 'bg-ember-500/20 text-ember-400' : 'bg-void-800 text-mist-100')}
+                                onClick={() => { toggleFavorite(movie); toast(isFav ? `Removed ${movie.title} from favorites` : `Added ${movie.title} to favorites`); }}
+                                className={cn('flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold ring-1 ring-white/10', isFav ? 'bg-ember-500/20 text-ember-400' : 'bg-void-800 text-mist-100')}
                             >
-                                <Heart className="h-4 w-4" fill={isFavorite ? 'currentColor' : 'none'} /> {isFavorite ? 'In favorites' : 'Add to favorites'}
+                                <Heart className="h-4 w-4" fill={isFav ? 'currentColor' : 'none'} /> {isFav ? 'In favorites' : 'Add to favorites'}
                             </button>
                             <button
                                 onClick={() => { addHistory(movie); toast(`Added ${movie.title} to your watch history`, 'info'); }}
