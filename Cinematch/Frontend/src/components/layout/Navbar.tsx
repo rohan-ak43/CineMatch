@@ -79,9 +79,6 @@ export function Navbar() {
                 </button>
             </nav>
 
-            {/* Signature: the mood-spectrum ribbon — a thin ambient gradient that stands in for
-          the app's core idea (mood drives everything) instead of a plain border line. */}
-            <div className="mood-spectrum h-[2px] w-full animate-drift opacity-70" />
 
             <AnimatePresence>
                 {open && (
