@@ -5,19 +5,19 @@
    DESIGN TOKENS  (Tailwind v4 — @theme)
    ────────────────────────────────────────────────────────── */
 @theme {
-  /* void — deep dark background palette */
-  --color-void-950: #07080f;
-  --color-void-900: #0d0f1a;
-  --color-void-800: #161928;
-  --color-void-700: #1f2338;
-  --color-void-600: #2a2f4a;
-  --color-void-500: #363c5d;
+  /* void — Apple Dark Mode background palette */
+  --color-void-950: #0B0B0F;
+  --color-void-900: #15151A;
+  --color-void-800: #1C1C1E;
+  --color-void-700: #2C2C2E;
+  --color-void-600: #3A3A3C;
+  --color-void-500: #48484A;
 
-  /* ember — warm orange-red primary accent */
-  --color-ember-600: #c23a14;
-  --color-ember-500: #e8491f;
-  --color-ember-400: #f06543;
-  --color-ember-300: #f58a6b;
+  /* ember — mapped to Apple Blue accent */
+  --color-ember-600: #0058B0;
+  --color-ember-500: #0071E3;
+  --color-ember-400: #338DE8;
+  --color-ember-300: #66AAED;
 
   /* mist — light text palette */
   --color-mist-100: #f0f2f8;
@@ -55,8 +55,8 @@ html {
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #07080f;
-  color: #b4bad0;
+  background-color: #0B0B0F;
+  color: #F5F5F7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -66,14 +66,14 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d0f1a;
+  background: #15151A;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2f4a;
+  background: #2C2C2E;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #363c5d;
+  background: #3A3A3C;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -82,21 +82,19 @@ body {
 
 /* Glassmorphism card */
 .glass {
-  background: rgba(22, 25, 40, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(28, 28, 30, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Mood-spectrum gradient ribbon used in Navbar */
+/* Mood-spectrum gradient ribbon used in Navbar (soft blue-green Apple style) */
 .mood-spectrum {
   background: linear-gradient(
     90deg,
-    #e8491f 0%,
-    #f5c842 25%,
-    #5847c8 50%,
-    #06b6d4 75%,
-    #22c55e 100%
+    #0071E3 0%,
+    #34C759 50%,
+    #5E5CE6 100%
   );
 }
 

@@ -27,8 +27,8 @@ export function Navbar() {
     return (
         <header
             className={cn(
-                'sticky top-0 z-50 transition-colors duration-300',
-                scrolled ? 'bg-void-950/85 backdrop-blur-lg' : 'bg-transparent'
+                'sticky top-0 z-50 transition-all duration-300',
+                scrolled ? 'bg-void-950/70 backdrop-blur-xl border-b border-white/10' : 'bg-transparent border-b border-transparent'
             )}
         >
             <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
@@ -48,7 +48,7 @@ export function Navbar() {
                             className={({ isActive }) =>
                                 cn(
                                     'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-                                    isActive ? 'bg-void-800 text-mist-100' : 'text-mist-300 hover:text-mist-100'
+                                    isActive ? 'bg-white/10 text-white shadow-sm' : 'text-mist-300 hover:text-white hover:bg-white/5'
                                 )
                             }
                         >
@@ -64,7 +64,7 @@ export function Navbar() {
                     <Link
                         to="/profile"
                         aria-label="Profile"
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-void-800 ring-1 ring-white/10 hover:ring-ember-500/50"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 hover:bg-white/10 transition-colors"
                     >
                         <User className="h-4 w-4 text-mist-100" />
                     </Link>
@@ -86,7 +86,7 @@ export function Navbar() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden bg-void-950/95 backdrop-blur-lg xl:hidden"
+                        className="overflow-hidden bg-void-950/80 backdrop-blur-2xl border-b border-white/10 xl:hidden"
                     >
                         <div className="flex flex-col gap-1 px-4 pb-4 pt-2">
                             <SearchBar />
@@ -97,7 +97,7 @@ export function Navbar() {
                                     end={l.to === '/'}
                                     onClick={() => setOpen(false)}
                                     className={({ isActive }) =>
-                                        cn('rounded-lg px-3 py-2 text-sm font-medium', isActive ? 'bg-void-800 text-mist-100' : 'text-mist-300')
+                                        cn('rounded-lg px-3 py-2 text-sm font-medium transition-colors', isActive ? 'bg-white/10 text-white' : 'text-mist-300 hover:text-white hover:bg-white/5')
                                     }
                                 >
                                     {l.label}

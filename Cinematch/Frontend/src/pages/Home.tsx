@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Sparkles, Brain, Star, ChevronRight, TrendingUp } from 'lucide-react';
+import { Play, Sparkles, Brain, ChevronRight } from 'lucide-react';
 import { movies } from '../data/mockData';
 import { MovieCard } from '../components/movie/MovieCard';
+import { HeroBackgroundSlideshow } from '../components/HeroBackgroundSlideshow';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -28,106 +29,49 @@ const features = [
   },
 ];
 
-const heroMovie = movies[0];
 const trending = movies.slice(0, 6);
 
 export function Home() {
   return (
     <div>
       {/* ── Hero ── */}
-      <section className="relative min-h-[88vh] flex items-end overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 -z-10">
-          <img
-            src={heroMovie.backdrop}
-            alt=""
-            className="h-full w-full object-cover opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-void-950 via-void-950/80 to-void-950/20" />
-          <div className="absolute inset-0 bg-gradient-to-t from-void-950 via-transparent to-void-950/40" />
-        </div>
+      <section style={{ position: 'relative', minHeight: '92vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        {/* Cinematic Slideshow Background */}
+        <HeroBackgroundSlideshow />
 
-        {/* Floating particles */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full bg-ember-500/20"
-              style={{
-                width: `${Math.random() * 200 + 60}px`,
-                height: `${Math.random() * 200 + 60}px`,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                filter: 'blur(60px)',
-              }}
-              animate={{
-                x: [0, 30, -20, 0],
-                y: [0, -20, 30, 0],
-                opacity: [0.2, 0.5, 0.2],
-              }}
-              transition={{
-                duration: 8 + i * 2,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="mx-auto w-full max-w-7xl px-6 pb-20 pt-24">
+        <div style={{ position: 'relative', zIndex: 10 }} className="mx-auto w-full max-w-3xl px-6 text-center">
           <motion.div
             variants={stagger}
             initial="hidden"
             animate="show"
-            className="max-w-2xl"
           >
-
-
             <motion.h1
               variants={fadeUp}
-              className="font-display text-5xl font-extrabold leading-tight text-mist-100 sm:text-6xl lg:text-7xl"
+              className="font-display text-5xl font-extrabold tracking-tight text-mist-100 sm:text-6xl lg:text-7xl"
             >
-              Find Your
-              <span className="block text-ember-400">Perfect Film</span>
+              Find Your <br /> Perfect Film
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
-              className="mt-5 max-w-xl text-lg leading-relaxed text-mist-300"
+              className="mx-auto mt-6 max-w-xl text-lg font-medium text-mist-300 sm:text-xl"
             >
-              CineMatch learns your taste, reads your mood, and recommends movies you'll actually love — not just what's trending.
+              Discover movies tailored to your mood, watch history, and personal taste.
             </motion.p>
 
-            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-4">
+            <motion.div variants={fadeUp} className="mt-10 flex flex-wrap justify-center gap-4">
               <Link
                 to="/recommendations"
-                className="btn-glow flex items-center gap-2 rounded-full bg-ember-500 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-ember-500/25 transition-all"
+                className="flex items-center gap-2 rounded-full bg-ember-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-ember-500/20 transition-all hover:scale-[1.03] hover:bg-ember-400"
               >
                 <Sparkles className="h-4 w-4" /> Get Recommendations
               </Link>
               <Link
                 to="/movies"
-                className="flex items-center gap-2 rounded-full border border-white/10 bg-void-800/60 px-7 py-3.5 text-sm font-semibold text-mist-100 backdrop-blur-sm hover:border-white/20 transition-all"
+                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-3.5 text-sm font-semibold text-mist-100 backdrop-blur-md transition-all hover:bg-white/10 hover:border-white/20"
               >
                 <Play className="h-4 w-4" /> Browse All Movies
               </Link>
-            </motion.div>
-
-            <motion.div variants={fadeUp} className="mt-10 flex items-center gap-6">
-              <div className="flex -space-x-2">
-                {['S', 'M', 'A', 'R'].map((l, i) => (
-                  <div
-                    key={i}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white ring-2 ring-void-950"
-                    style={{ background: ['#e8491f', '#5847c8', '#f5c842', '#06b6d4'][i] }}
-                  >
-                    {l}
-                  </div>
-                ))}
-              </div>
-              <div className="text-sm text-mist-400">
-                <span className="font-semibold text-mist-100">10,000+</span> movies curated for you
-              </div>
             </motion.div>
           </motion.div>
         </div>
