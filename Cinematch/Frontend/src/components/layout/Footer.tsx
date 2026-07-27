@@ -76,14 +76,6 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/5 pt-6 sm:flex-row">
-          <p className="text-xs text-mist-500">
-            © {new Date().getFullYear()} CineMatch. All rights reserved.
-          </p>
-          <p className="flex items-center gap-1 text-xs text-mist-500">
-            Made with <Heart className="h-3 w-3 fill-ember-500 text-ember-500" /> for movie lovers
-          </p>
-        </div>
       </div>
     </footer>
   );
