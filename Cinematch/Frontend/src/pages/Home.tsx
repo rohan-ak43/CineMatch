@@ -163,8 +163,8 @@ export function Home() {
       </section>
 
       {/* ── Mood CTA Banner ── */}
-      <section className="relative mx-6 mb-16 overflow-hidden rounded-3xl lg:mx-auto lg:max-w-7xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-dusk-600 via-ember-500 to-gilt-500 opacity-90" />
+      <section className="relative mx-6 mb-16 overflow-hidden rounded-3xl border border-white/5 shadow-2xl lg:mx-auto lg:max-w-7xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-void-800 to-void-950" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15]" />
         <div className="relative px-8 py-12 sm:px-12 md:flex md:items-center md:justify-between">
           <div>
