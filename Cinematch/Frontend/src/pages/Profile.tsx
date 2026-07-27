@@ -101,18 +101,16 @@ export function Profile() {
         className="grid grid-cols-2 gap-4 sm:grid-cols-3"
       >
         {[
-          { icon: Heart, label: 'My Favorites', count: favorites.length, to: '/favorites', color: 'text-ember-400 bg-ember-500/10' },
-          { icon: Clock, label: 'Watch History', count: history.length, to: '/history', color: 'text-dusk-400 bg-dusk-500/10' },
-          { icon: Star, label: 'Dashboard', count: null, to: '/dashboard', color: 'text-gilt-400 bg-gilt-500/10' },
+          { icon: Heart, label: 'My Favorites', count: favorites.length, to: '/favorites', color: 'text-ember-400' },
+          { icon: Clock, label: 'Watch History', count: history.length, to: '/history', color: 'text-dusk-400' },
+          { icon: Star, label: 'Dashboard', count: null, to: '/dashboard', color: 'text-gilt-400' },
         ].map((item) => (
           <Link
             key={item.to}
             to={item.to}
             className="glass flex flex-col gap-2 rounded-2xl p-5 hover:ring-1 hover:ring-white/10 transition-all card-lift"
           >
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.color}`}>
-              <item.icon className="h-5 w-5" />
-            </div>
+            <item.icon className={`mb-2 h-8 w-8 ${item.color}`} />
             <p className="font-display font-semibold text-mist-100">{item.label}</p>
             {item.count !== null && (
               <p className="text-sm text-mist-500">{item.count} items</p>

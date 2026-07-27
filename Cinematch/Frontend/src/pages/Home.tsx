@@ -15,25 +15,16 @@ const stagger = {
 
 const features = [
   {
-    icon: Brain,
     title: 'Mood-Aware AI',
     description: 'Tell us how you feel and we\'ll find movies that match your emotional state perfectly.',
-    color: 'text-dusk-400',
-    bg: 'bg-dusk-500/10',
   },
   {
-    icon: Sparkles,
     title: 'Smart Recommendations',
     description: 'Our engine learns your taste over time and surfaces hidden gems you\'ll love.',
-    color: 'text-ember-400',
-    bg: 'bg-ember-500/10',
   },
   {
-    icon: TrendingUp,
     title: 'Curated Trending',
     description: 'Stay up-to-date with what\'s popular globally, filtered to your genre preferences.',
-    color: 'text-gilt-400',
-    bg: 'bg-gilt-500/10',
   },
 ];
 
@@ -213,9 +204,7 @@ export function Home() {
               transition={{ delay: i * 0.1 }}
               className="glass rounded-2xl p-6 card-lift"
             >
-              <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.bg}`}>
-                <f.icon className={`h-6 w-6 ${f.color}`} />
-              </div>
+
               <h3 className="font-display text-lg font-semibold text-mist-100">{f.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-mist-400">{f.description}</p>
             </motion.div>

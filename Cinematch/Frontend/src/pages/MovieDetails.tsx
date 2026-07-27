@@ -41,13 +41,18 @@ export function MovieDetails() {
 
     return (
         <div>
-            <div className="relative h-[46vh] min-h-[320px] w-full overflow-hidden sm:h-[56vh]">
-                <img src={movie.backdrop} alt="" className="h-full w-full object-cover" />
+            <div className="relative h-[46vh] min-h-[320px] w-full overflow-hidden bg-void-900 sm:h-[56vh]">
+                <img 
+                    src={movie.backdrop} 
+                    alt="" 
+                    className="h-full w-full object-cover" 
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-void-950 via-void-950/70 to-void-950/10" />
                 <div className="absolute inset-0 bg-gradient-to-r from-void-950/70 via-transparent to-transparent" />
             </div>
 
-            <div className="mx-auto -mt-32 max-w-6xl px-6 pb-16 sm:-mt-40">
+            <div className="relative z-10 mx-auto -mt-32 max-w-6xl px-6 pb-16 sm:-mt-40">
                 <div className="flex flex-col gap-6 sm:flex-row">
                     <img
                         src={movie.poster}

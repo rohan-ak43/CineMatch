@@ -11,9 +11,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
       animate={{ opacity: 1, y: 0 }}
       className="glass rounded-2xl p-5"
     >
-      <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
-        <Icon className="h-5 w-5" />
-      </div>
+      <Icon className={`mb-3 h-8 w-8 ${color}`} />
       <p className="text-2xl font-bold font-display text-mist-100">{value}</p>
       <p className="mt-0.5 text-sm text-mist-500">{label}</p>
     </motion.div>
@@ -54,10 +52,10 @@ export function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-10">
-        <StatCard icon={Clock} label="Movies Watched" value={history.length} color="bg-dusk-500/10 text-dusk-400" />
-        <StatCard icon={Heart} label="Favorites" value={favorites.length} color="bg-ember-500/10 text-ember-400" />
-        <StatCard icon={Film} label="Top Genre" value={topGenre} color="bg-gilt-500/10 text-gilt-400" />
-        <StatCard icon={Star} label="Avg. Rating Saved" value={avgRating} color="bg-emerald-500/10 text-emerald-400" />
+        <StatCard icon={Clock} label="Movies Watched" value={history.length} color="text-dusk-400" />
+        <StatCard icon={Heart} label="Favorites" value={favorites.length} color="text-ember-400" />
+        <StatCard icon={Film} label="Top Genre" value={topGenre} color="text-gilt-400" />
+        <StatCard icon={Star} label="Avg. Rating Saved" value={avgRating} color="text-emerald-400" />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
