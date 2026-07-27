@@ -34,7 +34,7 @@ export function Footer() {
             </p>
             <div className="mt-5 flex gap-3">
               <a
-                href="https://github.com"
+                href="https://github.com/rohan-ak43"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="GitHub"

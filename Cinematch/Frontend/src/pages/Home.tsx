@@ -81,10 +81,7 @@ export function Home() {
             animate="show"
             className="max-w-2xl"
           >
-            <motion.div variants={fadeUp} className="mb-4 inline-flex items-center gap-2 rounded-full border border-ember-500/30 bg-ember-500/10 px-3 py-1 text-xs font-semibold text-ember-300">
-              <Sparkles className="h-3.5 w-3.5" />
-              AI-Powered Movie Discovery
-            </motion.div>
+
 
             <motion.h1
               variants={fadeUp}
