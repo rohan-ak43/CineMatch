@@ -1,222 +1,44 @@
+// ─── App-level Movie type ──────────────────────────────────────────────────────
+// This is the canonical Movie type used across components, store, and pages.
+// It is populated from TMDB API data via the tmdb service converter functions.
+
 export interface Movie {
-  id: string;
+  id: string;            // String version of TMDB numeric id
   title: string;
-  poster: string;
-  backdrop: string;
-  genres: string[];
-  rating: number;
-  year: number;
-  runtime: number; // minutes
-  synopsis: string;
-  director: string;
+  poster: string;        // Full CDN URL (w342 for cards, w500 for detail)
+  backdrop: string;      // Full CDN URL (w1280 / original)
+  genres: string[];      // Human-readable genre names
+  genreIds: number[];    // TMDB genre IDs (for discover queries)
+  rating: number;        // vote_average (0–10)
+  voteCount: number;
+  year: number;          // Parsed from release_date
+  releaseDate: string;   // ISO date string YYYY-MM-DD
+  runtime: number;       // Minutes; 0 when not fetched (list view)
+  synopsis: string;      // overview
+  director: string;      // From credits; '' for list items
   writers: string[];
-  cast: string[];
-  budget: string;
+  cast: string[];        // Top 8 cast names; [] for list items
+  budget: string;        // Formatted, e.g. '$165.0M'; '' for list items
   revenue: string;
-  streamingOn: string[];
-  language: string;
-  mood: string[];
+  language: string;      // English name of primary spoken language
+  originalLanguage: string; // ISO 639-1 code
+  popularity: number;
+  mood: string[];        // Derived from genres for backward compat
+  streamingOn: string[]; // Empty — TMDB Watch Providers API is premium tier
+  // Detail-only optional fields
+  trailerKey?: string;   // YouTube video key
+  tagline?: string;
+  status?: string;
 }
 
-export const movies: Movie[] = [
-  {
-    id: '1',
-    title: 'Interstellar',
-    poster: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fK5VQsXEG.jpg',
-    genres: ['Sci-Fi', 'Drama', 'Adventure'],
-    rating: 8.7,
-    year: 2014,
-    runtime: 169,
-    synopsis: 'A team of explorers travel through a wormhole in space in an attempt to ensure humanity\'s survival as Earth faces an ecological catastrophe.',
-    director: 'Christopher Nolan',
-    writers: ['Jonathan Nolan', 'Christopher Nolan'],
-    cast: ['Matthew McConaughey', 'Anne Hathaway', 'Jessica Chastain', 'Michael Caine'],
-    budget: '$165M',
-    revenue: '$773M',
-    streamingOn: ['Paramount+', 'Apple TV'],
-    language: 'English',
-    mood: ['thoughtful', 'epic', 'emotional'],
-  },
-  {
-    id: '2',
-    title: 'The Dark Knight',
-    poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/hkBaDkMWbLaf8B1lsWsG2hdc6UE.jpg',
-    genres: ['Action', 'Crime', 'Drama'],
-    rating: 9.0,
-    year: 2008,
-    runtime: 152,
-    synopsis: 'When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.',
-    director: 'Christopher Nolan',
-    writers: ['Jonathan Nolan', 'Christopher Nolan', 'Bob Kane'],
-    cast: ['Christian Bale', 'Heath Ledger', 'Aaron Eckhart', 'Maggie Gyllenhaal'],
-    budget: '$185M',
-    revenue: '$1B',
-    streamingOn: ['HBO Max', 'Netflix'],
-    language: 'English',
-    mood: ['thrilling', 'dark', 'intense'],
-  },
-  {
-    id: '3',
-    title: 'Inception',
-    poster: 'https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/s2bT29y0ngXxxu2IA8AOzzXTRhd.jpg',
-    genres: ['Action', 'Sci-Fi', 'Thriller'],
-    rating: 8.8,
-    year: 2010,
-    runtime: 148,
-    synopsis: 'A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.',
-    director: 'Christopher Nolan',
-    writers: ['Christopher Nolan'],
-    cast: ['Leonardo DiCaprio', 'Joseph Gordon-Levitt', 'Elliot Page', 'Tom Hardy'],
-    budget: '$160M',
-    revenue: '$836M',
-    streamingOn: ['Netflix', 'Amazon Prime'],
-    language: 'English',
-    mood: ['mind-bending', 'thrilling', 'intense'],
-  },
-  {
-    id: '4',
-    title: 'Parasite',
-    poster: 'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/TU9NIjwzjoKPwQHoHshkFcQUCG.jpg',
-    genres: ['Thriller', 'Drama', 'Comedy'],
-    rating: 8.5,
-    year: 2019,
-    runtime: 132,
-    synopsis: 'Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim clan.',
-    director: 'Bong Joon-ho',
-    writers: ['Bong Joon-ho', 'Han Jin-won'],
-    cast: ['Song Kang-ho', 'Lee Sun-kyun', 'Cho Yeo-jeong', 'Choi Woo-shik'],
-    budget: '$11.4M',
-    revenue: '$258M',
-    streamingOn: ['Hulu', 'Amazon Prime'],
-    language: 'Korean',
-    mood: ['dark', 'thrilling', 'thought-provoking'],
-  },
-  {
-    id: '5',
-    title: 'La La Land',
-    poster: 'https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/nadTlnTE6DdFBp9UlGEYMSRNoMH.jpg',
-    genres: ['Romance', 'Drama', 'Musical'],
-    rating: 8.0,
-    year: 2016,
-    runtime: 128,
-    synopsis: 'While navigating their careers in Los Angeles, a pianist and an aspiring actress fall in love while attempting to reconcile their aspirations for the future.',
-    director: 'Damien Chazelle',
-    writers: ['Damien Chazelle'],
-    cast: ['Ryan Gosling', 'Emma Stone', 'John Legend', 'J.K. Simmons'],
-    budget: '$30M',
-    revenue: '$446M',
-    streamingOn: ['Netflix', 'Disney+'],
-    language: 'English',
-    mood: ['romantic', 'feel-good', 'emotional'],
-  },
-  {
-    id: '6',
-    title: 'Get Out',
-    poster: 'https://image.tmdb.org/t/p/w500/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/cdiJb45dWWuIWvwN5wJhmk9XuLf.jpg',
-    genres: ['Horror', 'Thriller', 'Mystery'],
-    rating: 7.7,
-    year: 2017,
-    runtime: 104,
-    synopsis: 'A young African-American visits his White girlfriend\'s parents for the weekend, where his simmering uneasiness about their reception of him eventually reaches a boiling point.',
-    director: 'Jordan Peele',
-    writers: ['Jordan Peele'],
-    cast: ['Daniel Kaluuya', 'Allison Williams', 'Bradley Whitford', 'Catherine Keener'],
-    budget: '$4.5M',
-    revenue: '$255M',
-    streamingOn: ['Amazon Prime', 'Peacock'],
-    language: 'English',
-    mood: ['tense', 'dark', 'thought-provoking'],
-  },
-  {
-    id: '7',
-    title: 'Everything Everywhere All at Once',
-    poster: 'https://image.tmdb.org/t/p/w500/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/feSiISwgEpVzR1v3zv2n2NSa3ow.jpg',
-    genres: ['Sci-Fi', 'Comedy', 'Drama', 'Action'],
-    rating: 7.8,
-    year: 2022,
-    runtime: 139,
-    synopsis: 'An aging Chinese immigrant is swept up in an insane adventure in which she alone can save the world by exploring other universes connecting with the lives she could have led.',
-    director: 'Daniel Kwan, Daniel Scheinert',
-    writers: ['Daniel Kwan', 'Daniel Scheinert'],
-    cast: ['Michelle Yeoh', 'Ke Huy Quan', 'Jamie Lee Curtis', 'Stephanie Hsu'],
-    budget: '$14.3M',
-    revenue: '$74M',
-    streamingOn: ['Netflix', 'Showtime'],
-    language: 'English',
-    mood: ['mind-bending', 'emotional', 'funny'],
-  },
-  {
-    id: '8',
-    title: 'The Shawshank Redemption',
-    poster: 'https://image.tmdb.org/t/p/w500/lyQBXzOQSuE59IsHyhrp0qIiPAz.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/iNh3BivHyg5sQRPP1KOkzguEX0H.jpg',
-    genres: ['Drama'],
-    rating: 9.3,
-    year: 1994,
-    runtime: 142,
-    synopsis: 'Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.',
-    director: 'Frank Darabont',
-    writers: ['Stephen King', 'Frank Darabont'],
-    cast: ['Tim Robbins', 'Morgan Freeman', 'Bob Gunton', 'William Sadler'],
-    budget: '$25M',
-    revenue: '$58M',
-    streamingOn: ['Netflix', 'Amazon Prime'],
-    language: 'English',
-    mood: ['uplifting', 'emotional', 'thoughtful'],
-  },
-  {
-    id: '9',
-    title: 'Whiplash',
-    poster: 'https://image.tmdb.org/t/p/w500/7fn624j5lj3xTme2SgiLCeuedmO.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/fRGxZuo7jJUWQsVg9PREb98Aclp.jpg',
-    genres: ['Drama', 'Music'],
-    rating: 8.5,
-    year: 2014,
-    runtime: 107,
-    synopsis: 'A promising young drummer enrolls at a cut-throat music conservatory where his dreams of greatness are mentored by an instructor who will stop at nothing to realize a student\'s potential.',
-    director: 'Damien Chazelle',
-    writers: ['Damien Chazelle'],
-    cast: ['Miles Teller', 'J.K. Simmons', 'Paul Reiser', 'Melissa Benoist'],
-    budget: '$3.3M',
-    revenue: '$49M',
-    streamingOn: ['Netflix', 'Amazon Prime'],
-    language: 'English',
-    mood: ['intense', 'thrilling', 'inspiring'],
-  },
-  {
-    id: '10',
-    title: 'Spirited Away',
-    poster: 'https://image.tmdb.org/t/p/w500/39wmItIWsg5siqxyHkynNB6iFP7.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/bSavkhRJnFjrBLOgNKq7JvQZFja.jpg',
-    genres: ['Animation', 'Adventure', 'Fantasy'],
-    rating: 8.6,
-    year: 2001,
-    runtime: 125,
-    synopsis: 'During her family\'s move to the suburbs, a sullen 10-year-old girl wanders into a world ruled by gods, witches, and spirits, and where humans are changed into beasts.',
-    director: 'Hayao Miyazaki',
-    writers: ['Hayao Miyazaki'],
-    cast: ['Daveigh Chase', 'Suzanne Pleshette', 'Miyu Irino', 'Mari Natsuki'],
-    budget: '$19M',
-    revenue: '$395M',
-    streamingOn: ['HBO Max', 'Netflix'],
-    language: 'Japanese',
-    mood: ['enchanting', 'feel-good', 'adventurous'],
-  },
-];
-
+/** Generates a human-readable explanation for a recommendation. */
 export function explainableFor(movie: Movie, _watched: Movie[]): string {
   const reasons = [
-    `Because you enjoy ${movie.genres[0]} films with strong storytelling`,
+    `Because you enjoy ${movie.genres[0] ?? 'great'} films with strong storytelling`,
     `Highly rated (${movie.rating}/10) with critically acclaimed performances`,
-    `Directed by ${movie.director}, a filmmaker beloved for visual storytelling`,
     `A fan favourite across multiple genre preferences similar to yours`,
+    `Popular on TMDB with ${movie.voteCount.toLocaleString()} ratings worldwide`,
   ];
-  return reasons[Math.floor(movie.id.charCodeAt(0) % reasons.length)];
+  const idx = movie.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % reasons.length;
+  return reasons[idx];
 }

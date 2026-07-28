@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
 import { BarChart2, Heart, Clock, Star, TrendingUp, Film } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAppStore } from '../store/useAppStore';
-import { movies } from '../data/mockData';
+import { tmdbService } from '../lib/tmdb';
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string | number; color: string }) {
   return (
@@ -21,10 +22,16 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 export function Dashboard() {
   const { favorites, history } = useAppStore();
 
+  const { data: popularData } = useQuery({
+    queryKey: ['popular', 1],
+    queryFn: () => tmdbService.getPopular(1),
+    staleTime: 10 * 60 * 1000,
+  });
+
   const topGenre = (() => {
     const counts: Record<string, number> = {};
-    [...favorites, ...history.map((h) => h.movie)].forEach((m) => {
-      m.genres.forEach((g) => { counts[g] = (counts[g] || 0) + 1; });
+    [...favorites, ...history.map(h => h.movie)].forEach(m => {
+      m.genres.forEach(g => { counts[g] = (counts[g] || 0) + 1; });
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return sorted[0]?.[0] ?? '—';
@@ -34,8 +41,13 @@ export function Dashboard() {
     ? (favorites.reduce((s, m) => s + m.rating, 0) / favorites.length).toFixed(1)
     : '—';
 
-  const recentMovies = history.slice(0, 4).map((h) => h.movie);
-  const suggestedMovies = movies.filter((m) => !favorites.find((f) => f.id === m.id)).slice(0, 3);
+  const recentMovies = history.slice(0, 4).map(h => h.movie);
+
+  // "Suggested for you" — popular movies not already in favorites
+  const favoriteIds = new Set(favorites.map(f => f.id));
+  const suggestedMovies = (popularData?.movies ?? [])
+    .filter(m => !favoriteIds.has(m.id))
+    .slice(0, 3);
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
@@ -66,10 +78,12 @@ export function Dashboard() {
           </h2>
 
           {recentMovies.length === 0 ? (
-            <p className="text-sm text-mist-500 py-4">No watch history yet. <Link to="/movies" className="text-ember-400 hover:underline">Browse movies</Link></p>
+            <p className="text-sm text-mist-500 py-4">
+              No watch history yet. <Link to="/movies" className="text-ember-400 hover:underline">Browse movies</Link>
+            </p>
           ) : (
             <div className="flex flex-col gap-3">
-              {recentMovies.map((movie) => (
+              {recentMovies.map(movie => (
                 <Link
                   key={movie.id}
                   to={`/movies/${movie.id}`}
@@ -96,7 +110,7 @@ export function Dashboard() {
             <TrendingUp className="h-4 w-4 text-ember-400" /> Suggested For You
           </h2>
           <div className="flex flex-col gap-3">
-            {suggestedMovies.map((movie) => (
+            {suggestedMovies.map(movie => (
               <Link
                 key={movie.id}
                 to={`/movies/${movie.id}`}

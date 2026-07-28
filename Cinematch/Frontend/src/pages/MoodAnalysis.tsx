@@ -1,30 +1,50 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ChevronRight, Zap, Droplets, Sun, Brain, Moon, Smile, Heart, Compass, SmilePlus } from 'lucide-react';
-import { movies } from '../data/mockData';
+import { ChevronRight, Zap, Droplets, Sun, Brain, Moon, Smile, Heart, Compass, SmilePlus } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { tmdbService, MOOD_GENRE_MAP } from '../lib/tmdb';
 import { MovieCard } from '../components/movie/MovieCard';
+import { MovieGridSkeleton } from '../components/ui/LoadingSkeleton';
 import { cn } from '../lib/utils';
 
 const moods = [
-  { id: 'thrilling', icon: Zap, label: 'Thrilling', description: 'Edge-of-seat excitement', color: 'bg-ember-500/20 border-ember-500/40 text-ember-300', activeBg: 'bg-ember-500' },
-  { id: 'emotional', icon: Droplets, label: 'Emotional', description: 'Feel something deep', color: 'bg-dusk-500/20 border-dusk-500/40 text-dusk-300', activeBg: 'bg-dusk-500' },
-  { id: 'feel-good', icon: Sun, label: 'Feel-Good', description: 'Uplifting & cheerful', color: 'bg-gilt-500/20 border-gilt-500/40 text-gilt-300', activeBg: 'bg-gilt-500' },
-  { id: 'mind-bending', icon: Brain, label: 'Mind-Bending', description: 'Reality-twisting plots', color: 'bg-purple-500/20 border-purple-500/40 text-purple-300', activeBg: 'bg-purple-500' },
-  { id: 'dark', icon: Moon, label: 'Dark & Gritty', description: 'Intense & raw', color: 'bg-void-700/60 border-void-600/60 text-mist-400', activeBg: 'bg-void-600' },
-  { id: 'funny', icon: Smile, label: 'Funny', description: 'Laughs guaranteed', color: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300', activeBg: 'bg-emerald-500' },
-  { id: 'romantic', icon: Heart, label: 'Romantic', description: 'Love stories', color: 'bg-pink-500/20 border-pink-500/40 text-pink-300', activeBg: 'bg-pink-500' },
-  { id: 'adventurous', icon: Compass, label: 'Adventurous', description: 'Epic journeys', color: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300', activeBg: 'bg-cyan-500' },
+  { id: 'thrilling',     icon: Zap,       label: 'Thrilling',     description: 'Edge-of-seat excitement',  color: 'bg-ember-500/20 border-ember-500/40 text-ember-300',    activeBg: 'bg-ember-500' },
+  { id: 'emotional',    icon: Droplets,   label: 'Emotional',     description: 'Feel something deep',      color: 'bg-dusk-500/20 border-dusk-500/40 text-dusk-300',       activeBg: 'bg-dusk-500' },
+  { id: 'feel-good',    icon: Sun,        label: 'Feel-Good',     description: 'Uplifting & cheerful',     color: 'bg-gilt-500/20 border-gilt-500/40 text-gilt-300',       activeBg: 'bg-gilt-500' },
+  { id: 'mind-bending', icon: Brain,      label: 'Mind-Bending',  description: 'Reality-twisting plots',   color: 'bg-purple-500/20 border-purple-500/40 text-purple-300', activeBg: 'bg-purple-500' },
+  { id: 'dark',         icon: Moon,       label: 'Dark & Gritty', description: 'Intense & raw',            color: 'bg-void-700/60 border-void-600/60 text-mist-400',       activeBg: 'bg-void-600' },
+  { id: 'funny',        icon: Smile,      label: 'Funny',         description: 'Laughs guaranteed',        color: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300', activeBg: 'bg-emerald-500' },
+  { id: 'romantic',     icon: Heart,      label: 'Romantic',      description: 'Love stories',             color: 'bg-pink-500/20 border-pink-500/40 text-pink-300',       activeBg: 'bg-pink-500' },
+  { id: 'adventurous',  icon: Compass,    label: 'Adventurous',   description: 'Epic journeys',            color: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300',       activeBg: 'bg-cyan-500' },
 ];
 
 export function MoodAnalysis() {
   const [selected, setSelected] = useState<string | null>(null);
   const [step, setStep] = useState<'pick' | 'results'>('pick');
+  const [activeMoodId, setActiveMoodId] = useState<string | null>(null);
 
-  const results = selected
-    ? movies.filter((m) => m.mood.some((md) => md.toLowerCase().includes(selected.toLowerCase()))).slice(0, 6)
-    : [];
+  const { data, isLoading } = useQuery({
+    queryKey: ['mood', activeMoodId],
+    queryFn: () => {
+      const genreIds = MOOD_GENRE_MAP[activeMoodId!] ?? [];
+      return tmdbService.discover({
+        genreIds,
+        sortBy: 'vote_average.desc',
+        voteCountGte: 300,
+        page: 1,
+      });
+    },
+    enabled: step === 'results' && !!activeMoodId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const activeMood = moods.find((m) => m.id === selected);
+  const results = data?.movies ?? [];
+  const activeMood = moods.find(m => m.id === activeMoodId);
+
+  const handleFind = () => {
+    setActiveMoodId(selected);
+    setStep('results');
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-14">
@@ -45,7 +65,7 @@ export function MoodAnalysis() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {moods.map((mood) => (
+              {moods.map(mood => (
                 <motion.button
                   key={mood.id}
                   whileHover={{ scale: 1.03 }}
@@ -68,7 +88,7 @@ export function MoodAnalysis() {
             <div className="mt-8 flex justify-center">
               <button
                 disabled={!selected}
-                onClick={() => setStep('results')}
+                onClick={handleFind}
                 className="flex items-center gap-2 rounded-full bg-ember-500 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-ember-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:bg-ember-400"
               >
                 Find My Movies
@@ -101,14 +121,16 @@ export function MoodAnalysis() {
               </div>
             </div>
 
-            {results.length > 0 ? (
+            {isLoading ? (
+              <MovieGridSkeleton count={12} />
+            ) : results.length > 0 ? (
               <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                {results.map((movie, i) => (
+                {results.slice(0, 12).map((movie, i) => (
                   <motion.div
                     key={movie.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.08 }}
+                    transition={{ delay: i * 0.06 }}
                   >
                     <MovieCard movie={movie} />
                   </motion.div>

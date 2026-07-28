@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { movies } from '../data/mockData';
 
-// Use both poster and backdrop URLs for variety
-// Prefer poster (portrait) images for a more cinematic, rich look
-const ALL_IMAGES = movies.map((m) => m.poster);
+interface HeroBackgroundSlideshowProps {
+  /** Full image URLs to cycle through. Pass poster or backdrop URLs. */
+  images: string[];
+}
 
-// Shuffle once at module load — fresh order per page load, stable per render
+const INTERVAL_MS = 5500;
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -15,32 +16,33 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-const IMAGES = shuffle(ALL_IMAGES);
-const INTERVAL_MS = 5500;
-
-export function HeroBackgroundSlideshow() {
+export function HeroBackgroundSlideshow({ images }: HeroBackgroundSlideshowProps) {
+  const [shuffled] = useState(() => shuffle(images.filter(Boolean)));
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
+    if (shuffled.length === 0) return;
     const timer = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % IMAGES.length);
+      setCurrent((prev) => (prev + 1) % shuffled.length);
     }, INTERVAL_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [shuffled]);
+
+  if (shuffled.length === 0) {
+    return (
+      <div
+        aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, zIndex: 0, backgroundColor: '#0B0B0F' }}
+      />
+    );
+  }
 
   return (
     <div
       aria-hidden="true"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        zIndex: 0,
-        overflow: 'hidden',
-        backgroundColor: '#0B0B0F',
-      }}
+      style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', backgroundColor: '#0B0B0F' }}
     >
-      {/* All images stacked — only the active one is visible via opacity */}
-      {IMAGES.map((src, i) => (
+      {shuffled.map((src, i) => (
         <img
           key={src}
           src={src}
@@ -53,9 +55,8 @@ export function HeroBackgroundSlideshow() {
             objectFit: 'cover',
             objectPosition: 'center',
             opacity: i === current ? 1 : 0,
-            // Ken Burns: the active image slowly zooms in via CSS animation
             animation: i === current ? `kenBurns ${INTERVAL_MS}ms ease-in-out forwards` : 'none',
-            transition: `opacity 1.5s ease-in-out`,
+            transition: 'opacity 1.5s ease-in-out',
             filter: 'saturate(0.7)',
             willChange: 'opacity, transform',
           }}
@@ -63,37 +64,14 @@ export function HeroBackgroundSlideshow() {
       ))}
 
       {/* Dark overlay for text readability */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.58)',
-        }}
-      />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0, 0, 0, 0.58)' }} />
 
       {/* Cinematic vignette */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.5) 100%)',
-        }}
-      />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.5) 100%)' }} />
 
       {/* Bottom fade into page */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: '200px',
-          background: 'linear-gradient(to top, #0B0B0F, transparent)',
-        }}
-      />
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '200px', background: 'linear-gradient(to top, #0B0B0F, transparent)' }} />
 
-      {/* CSS keyframe for Ken Burns effect */}
       <style>{`
         @keyframes kenBurns {
           from { transform: scale(1.0) translate(0, 0); }

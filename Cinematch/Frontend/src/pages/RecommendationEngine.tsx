@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Star, ChevronRight, RefreshCw, Film, Disc, Clapperboard, Globe, Zap, Target, Moon, User, Heart, Users, Home } from 'lucide-react';
+import { Star, ChevronRight, RefreshCw, Film, Disc, Clapperboard, Globe, Zap, Target, Moon, User, Heart, Users, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { movies } from '../data/mockData';
+import { useQuery } from '@tanstack/react-query';
+import { tmdbService } from '../lib/tmdb';
 import { MovieCard } from '../components/movie/MovieCard';
+import { MovieGridSkeleton } from '../components/ui/LoadingSkeleton';
 import { cn } from '../lib/utils';
+import type { DiscoverParams } from '../lib/tmdb';
 
 const questions = [
   {
@@ -12,40 +15,79 @@ const questions = [
     question: 'Preferred era?',
     options: [
       { value: 'classic', label: 'Classic (Pre-2000)', icon: Film },
-      { value: 'modern', label: 'Modern (2000s)', icon: Disc },
-      { value: 'recent', label: 'Recent (2015+)', icon: Clapperboard },
-      { value: 'any', label: 'Any era', icon: Globe },
+      { value: 'modern',  label: 'Modern (2000s)',     icon: Disc },
+      { value: 'recent',  label: 'Recent (2015+)',     icon: Clapperboard },
+      { value: 'any',     label: 'Any era',            icon: Globe },
     ],
   },
   {
     id: 'length',
     question: 'How long is your evening?',
     options: [
-      { value: 'short', label: 'Quick (<90 min)', icon: Zap },
-      { value: 'medium', label: 'Standard (90–120 min)', icon: Target },
-      { value: 'long', label: 'Epic (120+ min)', icon: Moon },
-      { value: 'any', label: 'Doesn\'t matter', icon: Sparkles },
+      { value: 'short',  label: 'Quick (<90 min)',        icon: Zap },
+      { value: 'medium', label: 'Standard (90–120 min)',  icon: Target },
+      { value: 'long',   label: 'Epic (120+ min)',        icon: Moon },
+      { value: 'any',    label: "Doesn't matter",         icon: Star },
     ],
   },
   {
     id: 'company',
-    question: 'Who\'s watching with you?',
+    question: "Who's watching with you?",
     options: [
-      { value: 'solo', label: 'Just me', icon: User },
+      { value: 'solo',    label: 'Just me',    icon: User },
       { value: 'partner', label: 'Date night', icon: Heart },
-      { value: 'friends', label: 'Friends', icon: Users },
-      { value: 'family', label: 'Family', icon: Home },
+      { value: 'friends', label: 'Friends',    icon: Users },
+      { value: 'family',  label: 'Family',     icon: Home },
     ],
   },
 ];
+
+function answersToDiscoverParams(answers: Record<string, string>): DiscoverParams {
+  const params: DiscoverParams = {
+    sortBy: 'vote_average.desc',
+    voteCountGte: 200,
+  };
+
+  // Era
+  if (answers.era === 'classic') {
+    params.primaryReleaseDateLte = '1999-12-31';
+  } else if (answers.era === 'modern') {
+    params.primaryReleaseDateGte = '2000-01-01';
+    params.primaryReleaseDateLte = '2014-12-31';
+  } else if (answers.era === 'recent') {
+    params.primaryReleaseDateGte = '2015-01-01';
+  }
+
+  // Length
+  if (answers.length === 'short')  params.withRuntimeLte = 89;
+  if (answers.length === 'medium') { params.withRuntimeGte = 90; params.withRuntimeLte = 120; }
+  if (answers.length === 'long')   params.withRuntimeGte = 121;
+
+  // Company
+  if (answers.company === 'partner') params.genreIds = [10749, 18]; // Romance, Drama
+  if (answers.company === 'friends') params.genreIds = [35, 28, 53]; // Comedy, Action, Thriller
+  if (answers.company === 'family')  params.genreIds = [10751, 16, 12]; // Family, Animation, Adventure
+
+  return params;
+}
 
 export function RecommendationEngine() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [step, setStep] = useState(0);
   const [showResults, setShowResults] = useState(false);
+  const [finalParams, setFinalParams] = useState<DiscoverParams | null>(null);
 
   const current = questions[step];
-  const progress = ((step) / questions.length) * 100;
+  const progress = (step / questions.length) * 100;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['recommendations', finalParams],
+    queryFn: () => tmdbService.discover({ ...finalParams!, page: 1 }),
+    enabled: showResults && !!finalParams,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const results = data?.movies ?? [];
 
   const handleAnswer = (value: string) => {
     const newAnswers = { ...answers, [current.id]: value };
@@ -53,6 +95,7 @@ export function RecommendationEngine() {
     if (step < questions.length - 1) {
       setStep(step + 1);
     } else {
+      setFinalParams(answersToDiscoverParams(newAnswers));
       setShowResults(true);
     }
   };
@@ -61,25 +104,8 @@ export function RecommendationEngine() {
     setAnswers({});
     setStep(0);
     setShowResults(false);
+    setFinalParams(null);
   };
-
-  // Filter based on answers
-  const results = (() => {
-    let result = [...movies];
-    if (answers.era === 'classic') result = result.filter((m) => m.year < 2000);
-    else if (answers.era === 'modern') result = result.filter((m) => m.year >= 2000 && m.year < 2015);
-    else if (answers.era === 'recent') result = result.filter((m) => m.year >= 2015);
-
-    if (answers.length === 'short') result = result.filter((m) => m.runtime < 90);
-    else if (answers.length === 'medium') result = result.filter((m) => m.runtime >= 90 && m.runtime <= 120);
-    else if (answers.length === 'long') result = result.filter((m) => m.runtime > 120);
-
-    if (answers.company === 'partner') result = result.filter((m) => m.genres.some((g) => ['Romance', 'Drama'].includes(g)));
-    else if (answers.company === 'friends') result = result.filter((m) => m.genres.some((g) => ['Comedy', 'Action', 'Thriller'].includes(g)));
-    else if (answers.company === 'family') result = result.filter((m) => m.genres.some((g) => ['Animation', 'Adventure', 'Comedy'].includes(g)));
-
-    return result.length > 0 ? result : movies.slice(0, 6);
-  })();
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-14">
@@ -113,7 +139,7 @@ export function RecommendationEngine() {
             <h1 className="font-display text-3xl font-bold text-mist-100 mb-8">{current.question}</h1>
 
             <div className="grid grid-cols-2 gap-3">
-              {current.options.map((opt) => (
+              {current.options.map(opt => (
                 <motion.button
                   key={opt.value}
                   whileHover={{ scale: 1.02 }}
@@ -144,11 +170,10 @@ export function RecommendationEngine() {
           >
             <div className="mb-8 flex items-center justify-between">
               <div>
-                <h1 className="font-display text-3xl font-bold text-mist-100">
-                  
-                  Your Picks
-                </h1>
-                <p className="mt-1 text-mist-500">{results.length} perfect matches for you</p>
+                <h1 className="font-display text-3xl font-bold text-mist-100">Your Picks</h1>
+                <p className="mt-1 text-mist-500">
+                  {isLoading ? 'Finding the perfect matches…' : `${results.length} perfect matches for you`}
+                </p>
               </div>
               <button
                 onClick={reset}
@@ -158,18 +183,22 @@ export function RecommendationEngine() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
-              {results.slice(0, 6).map((movie, i) => (
-                <motion.div
-                  key={movie.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                >
-                  <MovieCard movie={movie} />
-                </motion.div>
-              ))}
-            </div>
+            {isLoading ? (
+              <MovieGridSkeleton count={6} />
+            ) : (
+              <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+                {results.slice(0, 9).map((movie, i) => (
+                  <motion.div
+                    key={movie.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08 }}
+                  >
+                    <MovieCard movie={movie} />
+                  </motion.div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-10 text-center">
               <Link
