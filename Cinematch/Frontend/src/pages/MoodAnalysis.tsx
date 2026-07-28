@@ -71,7 +71,7 @@ export function MoodAnalysis() {
                 onClick={() => setStep('results')}
                 className="flex items-center gap-2 rounded-full bg-ember-500 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-ember-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:bg-ember-400"
               >
-                <Sparkles className="h-4 w-4" /> Find My Movies
+                Find My Movies
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>

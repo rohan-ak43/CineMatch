@@ -97,7 +97,7 @@ export function RecommendationEngine() {
               <div className="mb-4 flex items-center justify-between text-sm">
                 <span className="text-mist-500">Question {step + 1} of {questions.length}</span>
                 <span className="flex items-center gap-1.5 text-ember-400 font-semibold">
-                  <Sparkles className="h-4 w-4" /> Recommendation Engine
+                  Recommendation Engine
                 </span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-void-700 overflow-hidden">
@@ -145,7 +145,7 @@ export function RecommendationEngine() {
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h1 className="font-display text-3xl font-bold text-mist-100">
-                  <Sparkles className="inline h-6 w-6 text-ember-400 mr-2" />
+                  
                   Your Picks
                 </h1>
                 <p className="mt-1 text-mist-500">{results.length} perfect matches for you</p>

@@ -64,7 +64,7 @@ export function Home() {
                 to="/recommendations"
                 className="flex items-center gap-2 rounded-full bg-ember-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-ember-500/20 transition-all hover:scale-[1.03] hover:bg-ember-400"
               >
-                <Sparkles className="h-4 w-4" /> Get Recommendations
+                Get Recommendations
               </Link>
               <Link
                 to="/movies"
