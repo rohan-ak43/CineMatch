@@ -1,3 +1,5 @@
+//Cinematch/Frontend/src/App.tsx
+
 import { Suspense, lazy } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
