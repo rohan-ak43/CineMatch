@@ -1,0 +1,14 @@
+# Data pipeline + model
+pandas>=2.1
+numpy>=1.26
+scipy>=1.11
+scikit-learn>=1.4
+
+# API layer
+flask>=3.0
+
+# Firebase (existing backend — needed if firebase_client.py runs alongside ml/api.py)
+firebase-admin>=6.4
+
+# Production WSGI server (optional — for deploying app.py, not needed for local dev)
+gunicorn>=21.2
