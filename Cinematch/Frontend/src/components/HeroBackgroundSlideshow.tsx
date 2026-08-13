@@ -17,8 +17,16 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function HeroBackgroundSlideshow({ images }: HeroBackgroundSlideshowProps) {
-  const [shuffled] = useState(() => shuffle(images.filter(Boolean)));
+  const [shuffled, setShuffled] = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
+
+  // Re-shuffle whenever the image list changes (e.g. after the async TMDB fetch resolves)
+  useEffect(() => {
+    const filtered = images.filter(Boolean);
+    if (filtered.length === 0) return;
+    setShuffled(shuffle(filtered));
+    setCurrent(0);
+  }, [images]);
 
   useEffect(() => {
     if (shuffled.length === 0) return;
