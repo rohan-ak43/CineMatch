@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Clapperboard, ExternalLink, Globe2, Heart } from 'lucide-react';
+import { Clapperboard, ExternalLink, Globe2 } from 'lucide-react';
 
 const footerLinks = {
   Discover: [

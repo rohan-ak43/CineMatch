@@ -6,7 +6,6 @@ import { useQuery } from '@tanstack/react-query';
 import { tmdbService } from '../lib/tmdb';
 import { MovieCard } from '../components/movie/MovieCard';
 import { MovieGridSkeleton } from '../components/ui/LoadingSkeleton';
-import { cn } from '../lib/utils';
 import type { DiscoverParams } from '../lib/tmdb';
 
 const questions = [

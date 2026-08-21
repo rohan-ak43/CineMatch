@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Play, Brain, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { tmdbService } from '../lib/tmdb';
+import type { Movie } from '../data/mockData';
 import { MovieCard } from '../components/movie/MovieCard';
 import { MovieGridSkeleton } from '../components/ui/LoadingSkeleton';
 import { HeroBackgroundSlideshow } from '../components/HeroBackgroundSlideshow';
@@ -39,7 +40,7 @@ function MovieRow({
 }: {
   title: string;
   subtitle: string;
-  movies: ReturnType<typeof tmdbService.getTrending> extends Promise<infer R> ? R['movies'] : never;
+  movies: Movie[];
   isLoading: boolean;
 }) {
   return (

@@ -1,4 +1,4 @@
-import { AlertTriangle, SearchX, Star } from 'lucide-react';
+import { AlertTriangle, SearchX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function ErrorState({ message = 'Something went wrong.' }: { message?: string }) {

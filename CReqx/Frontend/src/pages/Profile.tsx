@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { User, Heart, Clock, Star, Settings, Camera } from 'lucide-react';
+import { Heart, Clock, Star, Settings, Camera } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 

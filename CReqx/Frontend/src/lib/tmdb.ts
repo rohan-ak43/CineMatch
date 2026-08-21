@@ -9,6 +9,7 @@ import type {
   TMDBGenre,
   DiscoverParams,
 } from './tmdb.types';
+export type { DiscoverParams } from './tmdb.types';
 import type { Movie } from '../data/mockData';
 
 // ─── Config ────────────────────────────────────────────────────────────────────
@@ -307,7 +308,7 @@ export const tmdbService = {
     const data = await tmdbFetch<TMDBPaginatedResponse<TMDBListMovie>>('/search/movie', {
       query: query.trim(),
       page,
-      include_adult: false,
+      include_adult: 'false',
     });
     return {
       movies: data.results.map(listItemToMovie),
