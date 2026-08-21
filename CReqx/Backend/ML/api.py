@@ -3,7 +3,7 @@ import pickle
 
 from flask import Blueprint, jsonify, request
 
-ARTIFACT_PATH = os.path.join(os.path.dirname(__file__), "artifacts", "cinematch_model.pkl")
+ARTIFACT_PATH = os.path.join(os.path.dirname(__file__), "artifacts", "creqx_model.pkl")
 
 recommender_bp = Blueprint("recommender", __name__)
 

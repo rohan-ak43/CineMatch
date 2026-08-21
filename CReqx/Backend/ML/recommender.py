@@ -13,7 +13,7 @@ from mood_engine import mood_scores
 DEFAULT_WEIGHTS = {"mood": 0.35, "history": 0.35, "watchlist": 0.20, "quality": 0.10}
 
 
-class CineMatchRecommender:
+class CReqxRecommender:
     def __init__(self):
         self.catalog: pd.DataFrame | None = None
         self.ml_to_tmdb: dict[int, int] = {}
@@ -166,7 +166,7 @@ class CineMatchRecommender:
 
 
 if __name__ == "__main__":
-    model = CineMatchRecommender().fit()
+    model = CReqxRecommender().fit()
 
     print("\n=== Cold start (no mood/history/watchlist) ===")
     print(model.recommend(top_n=5)[["title", "genres", "score"]])

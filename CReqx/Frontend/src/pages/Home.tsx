@@ -176,7 +176,7 @@ export function Home() {
       {/* ── Features ── */}
       <section className="mx-auto max-w-7xl px-6 pb-20">
         <div className="mb-10 text-center">
-          <h2 className="font-display text-3xl font-bold text-mist-100">Why CineMatch?</h2>
+          <h2 className="font-display text-3xl font-bold text-mist-100">Why CReqx?</h2>
           <p className="mt-2 text-mist-500">Built for people who take movies seriously.</p>
         </div>
 

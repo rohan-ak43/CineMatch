@@ -32,7 +32,7 @@ export function Signup() {
 
     async function onSubmit() {
         await new Promise((r) => setTimeout(r, 500));
-        toast('Account created — welcome to CineMatch!');
+        toast('Account created — welcome to CReqx!');
         navigate('/');
     }
 

@@ -1,4 +1,4 @@
-# CineMatch — ML-Powered Movie Recommendation System
+# CReqx — ML-Powered Movie Recommendation System
 
 > A movie recommendation system using Machine Learning, NLP, and Flask.
 

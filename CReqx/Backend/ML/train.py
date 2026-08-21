@@ -1,16 +1,16 @@
 import os
 import pickle
 
-from recommender import CineMatchRecommender
+from recommender import CReqxRecommender
 
 ARTIFACT_DIR = os.path.join(os.path.dirname(__file__), "artifacts")
-ARTIFACT_PATH = os.path.join(ARTIFACT_DIR, "cinematch_model.pkl")
+ARTIFACT_PATH = os.path.join(ARTIFACT_DIR, "creqx_model.pkl")
 
 
 def main():
     os.makedirs(ARTIFACT_DIR, exist_ok=True)
-    print("Fitting CineMatchRecommender...")
-    model = CineMatchRecommender().fit()
+    print("Fitting CReqxRecommender...")
+    model = CReqxRecommender().fit()
 
     with open(ARTIFACT_PATH, "wb") as f:
         pickle.dump(model, f)

@@ -1,4 +1,4 @@
-//Cinematch/Frontend/src/App.tsx
+//CReqx/Frontend/src/App.tsx
 
 import { Suspense, lazy } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
