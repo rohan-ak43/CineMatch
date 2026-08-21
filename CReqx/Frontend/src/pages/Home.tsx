@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Play, Brain, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -44,11 +46,11 @@ function MovieRow({
   isLoading: boolean;
 }) {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-16">
+    <section className="relative z-10 mx-auto max-w-7xl px-6 py-10">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h2 className="font-display text-2xl font-bold text-mist-100">{title}</h2>
-          <p className="mt-1 text-sm text-mist-500">{subtitle}</p>
+          <p className="mt-1 text-sm text-mist-400">{subtitle}</p>
         </div>
         <Link
           to="/movies"
@@ -96,63 +98,108 @@ export function Home() {
     .slice(0, 10)
     .map(m => m.backdrop);
 
+  // Punch through the app wrapper bg so the fixed canvas shows behind everything
+  useEffect(() => {
+    const appRoot = document.querySelector<HTMLElement>('.flex.min-h-screen');
+    const prev = appRoot?.style.background ?? '';
+    if (appRoot) appRoot.style.background = 'transparent';
+    return () => { if (appRoot) appRoot.style.background = prev; };
+  }, []);
+
   return (
-    <div>
-      {/* ── Hero ── */}
-      <section style={{ position: 'relative', minHeight: '92vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <HeroBackgroundSlideshow images={heroImages} />
+    <>
+      {/* Fixed cinematic canvas — truly behind the full viewport */}
+      {createPortal(
+        <div
+          aria-hidden="true"
+          style={{ position: 'fixed', inset: 0, zIndex: -1, overflow: 'hidden' }}
+        >
+          <HeroBackgroundSlideshow images={heroImages} />
+          {/* Smooth gradient: image at top, natural fade toward dark at bottom */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'linear-gradient(to bottom, transparent 35%, rgba(11,11,15,0.40) 60%, rgba(11,11,15,0.70) 80%, #0B0B0F 100%)',
+              pointerEvents: 'none',
+            }}
+          />
+        </div>,
+        document.body
+      )}
 
-        <div style={{ position: 'relative', zIndex: 10 }} className="mx-auto w-full max-w-3xl px-6 text-center">
-          <motion.div variants={stagger} initial="hidden" animate="show">
-            <motion.h1
-              variants={fadeUp}
-              className="font-display text-5xl font-extrabold tracking-tight text-mist-100 sm:text-6xl lg:text-7xl"
-            >
-              Find Your <br /> Perfect Film
-            </motion.h1>
-
-            <motion.p
-              variants={fadeUp}
-              className="mx-auto mt-6 max-w-xl text-lg font-medium text-mist-300 sm:text-xl"
-            >
-              Discover movies tailored to your mood, watch history, and personal taste.
-            </motion.p>
-
-            <motion.div variants={fadeUp} className="mt-10 flex flex-wrap justify-center gap-4">
-              <Link
-                to="/recommendations"
-                className="flex items-center gap-2 rounded-full bg-ember-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-ember-500/20 transition-all hover:scale-[1.03] hover:bg-ember-400"
+      {/* Page content — floats over the fixed background */}
+      <div>
+        {/* Hero */}
+        <section
+          style={{
+            minHeight: '88vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div className="mx-auto w-full max-w-3xl px-6 text-center">
+            <motion.div variants={stagger} initial="hidden" animate="show">
+              <motion.h1
+                variants={fadeUp}
+                className="font-display text-5xl font-extrabold tracking-tight text-mist-100 sm:text-6xl lg:text-7xl"
               >
-                Get Recommendations
-              </Link>
-              <Link
-                to="/movies"
-                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-3.5 text-sm font-semibold text-mist-100 backdrop-blur-md transition-all hover:bg-white/10 hover:border-white/20"
+                Find Your <br /> Perfect Film
+              </motion.h1>
+
+              <motion.p
+                variants={fadeUp}
+                className="mx-auto mt-6 max-w-xl text-lg font-medium text-mist-300 sm:text-xl"
               >
-                <Play className="h-4 w-4" /> Browse All Movies
-              </Link>
+                Discover movies tailored to your mood, watch history, and personal taste.
+              </motion.p>
+
+              <motion.div variants={fadeUp} className="mt-10 flex flex-wrap justify-center gap-4">
+                <Link
+                  to="/recommendations"
+                  className="flex items-center gap-2 rounded-full bg-ember-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-ember-500/20 transition-all hover:scale-[1.03] hover:bg-ember-400"
+                >
+                  Get Recommendations
+                </Link>
+                <Link
+                  to="/movies"
+                  className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-3.5 text-sm font-semibold text-mist-100 backdrop-blur-md transition-all hover:bg-white/10 hover:border-white/20"
+                >
+                  <Play className="h-4 w-4" /> Browse All Movies
+                </Link>
+              </motion.div>
             </motion.div>
-          </motion.div>
+          </div>
+        </section>
+
+        {/* Subtle section separator */}
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="h-px w-full bg-white/5" />
         </div>
-      </section>
 
-      {/* ── Trending Now ── */}
-      <MovieRow
-        title="Trending Now"
-        subtitle="Most popular picks this week"
-        movies={trendingData?.movies ?? []}
-        isLoading={trendingLoading}
-      />
+        {/* Trending Now */}
+        <MovieRow
+          title="Trending Now"
+          subtitle="Most popular picks this week"
+          movies={trendingData?.movies ?? []}
+          isLoading={trendingLoading}
+        />
 
-      {/* ── Popular Movies ── */}
-      <MovieRow
-        title="Popular Movies"
-        subtitle="Watched and loved globally right now"
-        movies={popularData?.movies ?? []}
-        isLoading={popularLoading}
-      />
+        {/* Popular Movies */}
+        <MovieRow
+          title="Popular Movies"
+          subtitle="Watched and loved globally right now"
+          movies={popularData?.movies ?? []}
+          isLoading={popularLoading}
+        />
 
-      {/* ── Mood CTA Banner ── */}
+        {/* Transition band into the solid sections below */}
+        <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, #0B0B0F)' }} />
+      </div>
+
+      {/* Mood CTA Banner */}
       <section className="relative mx-6 mb-16 overflow-hidden rounded-3xl border border-white/5 shadow-2xl lg:mx-auto lg:max-w-7xl">
         <div className="absolute inset-0 bg-gradient-to-r from-void-800 to-void-950" />
         <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.15]" />
@@ -197,6 +244,6 @@ export function Home() {
           ))}
         </div>
       </section>
-    </div>
+    </>
   );
 }

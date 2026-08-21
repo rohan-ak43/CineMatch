@@ -71,14 +71,12 @@ export function HeroBackgroundSlideshow({ images }: HeroBackgroundSlideshowProps
         />
       ))}
 
-      {/* Dark overlay for text readability */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0, 0, 0, 0.58)' }} />
+      {/* Dark overlay for text readability — lighter so the image shows through to the rows below */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0, 0, 0, 0.42)' }} />
 
       {/* Cinematic vignette */}
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.5) 100%)' }} />
 
-      {/* Bottom fade into page */}
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '200px', background: 'linear-gradient(to top, #0B0B0F, transparent)' }} />
 
       <style>{`
         @keyframes kenBurns {
