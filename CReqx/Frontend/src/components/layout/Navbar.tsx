@@ -35,7 +35,7 @@ export function Navbar() {
                 <Link to="/" className="flex items-center gap-2 shrink-0">
                     <Clapperboard className="h-6 w-6 text-ember-500" />
                     <span className="font-display text-lg font-bold tracking-tight text-mist-100">
-                        Cine<span className="text-ember-500">Match</span>
+                        C<span className="text-ember-500">Reqx</span>
                     </span>
                 </Link>
 

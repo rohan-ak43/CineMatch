@@ -18,7 +18,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
                 <Link to="/" className="mb-6 flex items-center justify-center gap-2">
                     <Clapperboard className="h-6 w-6 text-ember-500" />
                     <span className="font-display text-lg font-bold text-mist-100">
-                        Cine<span className="text-ember-500">Match</span>
+                        CR<span className="text-ember-500">eqx</span>
                     </span>
                 </Link>
                 <h1 className="text-center font-display text-xl font-bold text-mist-100">{title}</h1>
